@@ -1406,7 +1406,7 @@ protected:
             }
         }
 
-        for (auto const &var: slaveDescription.variables) {
+        for (auto const &var: slaveDescription.Variables) {
             if (var.StructuralParameter.get() != nullptr) {
                 const valueReference_t valueReference = var.valueReference;
                 const DcpDataType dataType = slavedescription::getDataType(slaveDescription, valueReference);
@@ -1467,7 +1467,7 @@ protected:
             }
         }
 
-        for (auto const &var: slaveDescription.variables) {
+        for (auto const &var: slaveDescription.Variables) {
             const valueReference_t &valueReference = var.valueReference;
             const DcpDataType dataType = slavedescription::getDataType(slaveDescription, valueReference);
             size_t baseSize = 0;
@@ -2620,10 +2620,10 @@ protected:
                                                                                               :
                                                                             "between " +
                                                                             std::to_string(
-                                                                                    output.minSteps) +
+                                                                                    *output.minSteps) +
                                                                             " and " +
                                                                             std::to_string(
-                                                                                    output.maxSteps));
+                                                                                    *output.maxSteps));
 #endif
                                 error = DcpError::INVALID_STEPS;
 
@@ -2675,8 +2675,8 @@ protected:
                             Log(INVALID_STEPS, steps[outputConfig.getDataId()],
                                 outputConfig.getSourceVr(), output.fixedSteps ?
                                                             std::to_string(output.defaultSteps) :
-                                                            "between " + std::to_string(output.minSteps) + " and " +
-                                                            std::to_string(output.maxSteps));
+                                                            "between " + std::to_string(*output.minSteps) + " and " +
+                                                            std::to_string(*output.maxSteps));
 #endif
                             if (error == DcpError::NONE) {
                                 error = DcpError::INVALID_STEPS;

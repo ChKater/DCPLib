@@ -81,20 +81,18 @@ public:
     SlaveDescription_t getSlaveDescription(){
         SlaveDescription_t slaveDescription = make_SlaveDescription(1, 0, "dcpslave", "b5279485-720d-4542-9f29-bee4d9a75ef9");
         slaveDescription.OpMode.SoftRealTime.set = true;
-        slaveDescription.OpMode.NonRealTime.set = true;
-        slaveDescription.OpMode.NonRealTime.fixedSteps = false;
-        slaveDescription.OpMode.NonRealTime.minSteps = 1;
-        slaveDescription.OpMode.NonRealTime.maxSteps = 100;
-        slaveDescription.TimeRes.resolutionRanges.push_back(
-                make_ResolutionRange(1, 1000, 1000));
+        slaveDescription.OpMode.NonRealTime.set = false;
+        Resolution_t resolution = make_Resolution();
+        resolution.numerator = 10;
+        slaveDescription.TimeRes.resolutions.push_back(resolution);
         slaveDescription.TransportProtocols.UDP_IPv4 = make_UDP_ptr();
         slaveDescription.TransportProtocols.UDP_IPv4->Control =
                 make_Control_ptr(HOST, 8080);
         ;
-        slaveDescription.TransportProtocols.UDP_IPv4->DAT_input_output = make_DAT_ptr(HOST);
+        slaveDescription.TransportProtocols.UDP_IPv4->DAT_input_output = make_DAT_ptr();
         slaveDescription.TransportProtocols.UDP_IPv4->DAT_input_output->availablePortRanges.push_back(
                 make_AviablePortRange(2048, 65535));
-        slaveDescription.TransportProtocols.UDP_IPv4->DAT_parameter = make_DAT_ptr(HOST);
+        slaveDescription.TransportProtocols.UDP_IPv4->DAT_parameter = make_DAT_ptr();
         slaveDescription.TransportProtocols.UDP_IPv4->DAT_parameter->availablePortRanges.push_back(
                 make_AviablePortRange(2048, 65535));
         slaveDescription.CapabilityFlags.canAcceptConfigPdus = true;
@@ -106,12 +104,12 @@ public:
         slaveDescription.CapabilityFlags.canProvideLogOnNotification = true;
 
         std::shared_ptr<Output_t> caus_y = make_Output_ptr<float64_t>();
-        slaveDescription.variables.push_back(make_Variable_output("y", y_vr, caus_y));
+        slaveDescription.Variables.push_back(make_Variable_output("y", y_vr, caus_y));
         std::shared_ptr<CommonCausality_t> caus_a =
                 make_CommonCausality_ptr<float64_t>();
         caus_a->Float64->start = std::make_shared<std::vector<float64_t>>();
         caus_a->Float64->start->push_back(10.0);
-        slaveDescription.variables.push_back(make_Variable_input("a", a_vr, caus_a));
+        slaveDescription.Variables.push_back(make_Variable_input("a", a_vr, caus_a));
         slaveDescription.Log = make_Log_ptr();
         slaveDescription.Log->categories.push_back(make_Category(1, "DCP_SLAVE"));
         slaveDescription.Log->templates.push_back(make_Template(

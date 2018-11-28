@@ -5,13 +5,15 @@
 #ifndef LIBACOSAR_ACIDESCRIPTIONREADER_H
 #define LIBACOSAR_ACIDESCRIPTIONREADER_H
 
-#include "dcp/xml/DcpSlaveDescriptionElements.hpp"
-#include "dcp/model/DcpConstants.hpp"
+#include <dcp/xml/DcpSlaveDescriptionElements.hpp>
+#include <dcp/model/DcpConstants.hpp>
+#include <dcp/helper/Helper.hpp>
 #include <iostream>
 
 namespace slavedescription {
+
     inline const Variable_t *getVariable(const SlaveDescription_t &slaveDescription, uint64_t vr) {
-        for (auto &var: slaveDescription.variables) {
+        for (auto &var: slaveDescription.Variables) {
             if (var.valueReference == vr) {
                 return &var;
             }
@@ -249,7 +251,7 @@ namespace slavedescription {
             return steps == output.defaultSteps;
         }
 
-        return steps == output.defaultSteps || (steps >= output.minSteps && steps <= output.maxSteps);
+        return steps == output.defaultSteps || (output.minSteps != nullptr && output.maxSteps != nullptr && steps >= *output.minSteps && steps <= *output.maxSteps);
     }
 
 
@@ -298,7 +300,7 @@ namespace slavedescription {
             case DcpTransportProtocol::BLUETOOTH:
                 return slaveDescription.TransportProtocols.Bluetooth.get() != nullptr;
             case DcpTransportProtocol::CAN:
-                return slaveDescription.TransportProtocols.CAN.get() != nullptr;
+                return slaveDescription.TransportProtocols.CAN;
             case DcpTransportProtocol::USB:
                 return slaveDescription.TransportProtocols.USB.get() != nullptr;
             case DcpTransportProtocol::TCP_IPv4:

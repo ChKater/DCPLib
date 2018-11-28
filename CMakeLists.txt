@@ -11,12 +11,15 @@ option(BUILD_ETHERNET "Build neccessary parts to use UDP driver." OFF)
 option(BUILD_BLUETOOTH "Build neccessary parts to use the Bluetooth RFCOMM driver." OFF)
 option(BUILD_SLAVE "Build neccessary parts to implement an DCP slave." OFF)
 option(BUILD_MASTER "Build neccessary parts to implement an DCP master." OFF)
+option(BUILD_XML "Build neccessary parts for handling slave deescription XML files" OFF)
+
 
 add_definitions(-DDEBUG)
 
 ##dcplib core
 add_library(Core INTERFACE)
 add_library(DCPLib::Core ALIAS Core)
+
 
 target_include_directories(Core INTERFACE
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/core>
@@ -133,6 +136,35 @@ if(BUILD_ALL OR BUILD_SLAVE)
     install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/slave DESTINATION include/DCPLib)
 endif(BUILD_ALL OR BUILD_SLAVE)
 
+if(BUILD_ALL OR BUILD_XML)
+    find_package(XercesC REQUIRED)
+
+    add_library(Xml INTERFACE)
+    add_library(DCPLib::Xml ALIAS Xml)
+
+    target_link_libraries(Xml INTERFACE DCPLib::Core)
+    target_link_libraries(Xml INTERFACE XercesC::XercesC)
+
+    if(WIN32)
+        target_link_libraries(Xml INTERFACE wsock32 ws2_32)
+    endif()
+
+    target_include_directories(Xml INTERFACE
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/xml>
+            $<INSTALL_INTERFACE:include/DCPLib/xml>
+            )
+
+    install(TARGETS Xml
+            EXPORT DCPLib-targets
+            COMPONENT Xml
+            ARCHIVE DESTINATION lib
+            LIBRARY DESTINATION lib
+            RUNTIME DESTINATION bin)
+
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/xml DESTINATION include/DCPLib)
+endif(BUILD_ALL OR BUILD_XML)
+
+
 install(EXPORT DCPLib-targets
         FILE
             DCPLibConfig.cmake
@@ -143,5 +175,5 @@ install(EXPORT DCPLib-targets
 
 
 add_executable(mytest src/test/BasicChecks.cpp)
-target_link_libraries(mytest DCPLib::Ethernet DCPLib::Bluetooth DCPLib::Master DCPLib::Slave)
+target_link_libraries(mytest DCPLib::Ethernet DCPLib::Bluetooth DCPLib::Master DCPLib::Slave DCPLib::Xml)
 
