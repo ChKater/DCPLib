@@ -13,19 +13,27 @@
 #include <fstream>
 
 #include <dcp/model/DcpPdu.hpp>
+#include <dcp/xml/DcpSlaveDescriptionReader.hpp>
 #include <dcp/driver/ethernet/udp/UdpDriver.hpp>
 #include <dcp/logic/DcpManagerMaster.hpp>
 #include <dcp/log/OstreamLog.hpp>
 
+
+/**
+ * Note: This example is just for demonstration purpose of the API.
+ * It uses very simple mechanisms and assumptions about the scenario to simulate,
+ * which will not work out in a general master tool.
+ */
 class MasterModel {
 public:
     MasterModel() : stdLog(std::cout) {
         driver = new UdpDriver(HOST, PORT);
 
+        slaveDescription = readSlaveDescription("Example-Slave-Description.xml");
         manager = new DcpManagerMaster(driver->getDcpDriver());
         uint8_t *netInfo = new uint8_t[6];
-        *((uint16_t *) netInfo) = slavePort;
-        *((uint32_t *) (netInfo + 2)) = asio::ip::address_v4::from_string(slaveIp).to_ulong();
+        *((uint16_t *) netInfo) = *slaveDescription->TransportProtocols.UDP_IPv4->Control->port;
+        *((uint32_t *) (netInfo + 2)) = asio::ip::address_v4::from_string(*slaveDescription->TransportProtocols.UDP_IPv4->Control->host).to_ulong();
         driver->getDcpDriver().setSlaveNetworkInformation(1, netInfo);
         delete[] netInfo;
         manager->setAckReceivedListener<SYNC>(
@@ -51,12 +59,11 @@ public:
         std::this_thread::sleep_for(dura);
         //driver->getDcpDriver().connectToSlave(1);
         std::cout << "Register Slaves" << std::endl;
-        manager->STC_register(1, DcpState::ALIVE, convertToUUID(slaveUuid), DcpOpMode::SRT, 1, 0);
+        manager->STC_register(1, DcpState::ALIVE, convertToUUID(slaveDescription->uuid), DcpOpMode::SRT, 1, 0);
         b.join();
     }
 
 private:
-
     void initialize() {
         std::cout << "Initialize Slaves" << std::endl;
         manager->STC_initialize(1, DcpState::CONFIGURED);
@@ -69,16 +76,16 @@ private:
 
         manager->CFG_scope(1, 1, DcpScope::CONFIGURED_INITIALIZING_INITIALIZED_RUNNING);
 
-        manager->CFG_input(1, 1, 0, 1, DcpDataType::float64);
-        manager->CFG_output(1, 1, 0, 2);
+        manager->CFG_input(1, 1, 0, slaveDescription->Variables.at(1).valueReference, DcpDataType::float64);
+        manager->CFG_output(1, 1, 0, slaveDescription->Variables.at(0).valueReference);
 
         manager->CFG_steps(1, 1, 1);
-        manager->CFG_time_res(1, numerator, denominator);
-        manager->CFG_source_network_information_UDP(1, 1, asio::ip::address_v4::from_string(slaveIp).to_ulong(),
-                                                    slaveDataPort);
-        manager->CFG_target_network_information_UDP(1, 1, asio::ip::address_v4::from_string(slaveIp).to_ulong(),
-                                                    slaveDataPort);
-
+        manager->CFG_time_res(1, slaveDescription->TimeRes.resolutions.front().numerator,
+                                 slaveDescription->TimeRes.resolutions.front().denominator);
+        manager->CFG_source_network_information_UDP(1, 1, asio::ip::address_v4::from_string(
+                        *slaveDescription->TransportProtocols.UDP_IPv4->Control->host).to_ulong(), *slaveDescription->TransportProtocols.UDP_IPv4->Control->port);
+        manager->CFG_target_network_information_UDP(1, 1,  asio::ip::address_v4::from_string(
+                *slaveDescription->TransportProtocols.UDP_IPv4->Control->host).to_ulong(), *slaveDescription->TransportProtocols.UDP_IPv4->Control->port);
         numOfCmd[1] = 7;
     }
 
@@ -122,12 +129,6 @@ private:
         std::cerr << "Error in slave configuration." << std::endl;
         std::exit(1);
     }
-
-    void receiveStateAck(uint8_t sender, uint16_t pduSeqId,
-                         DcpState state);
-
-    void receiveErrorAck(uint8_t sender, uint16_t pduSeqId,
-                         DcpError errorCode);
 
     void receiveStateChangedNotification(uint8_t sender,
                                          DcpState state) {
@@ -190,13 +191,8 @@ private:
     std::map<dcpId_t, uint8_t> numOfCmd;
     std::map<dcpId_t, uint64_t> receivedAcks;
 
-    uint32_t numerator = 100;
-    uint32_t denominator = 1000;
 
-    std::string slaveIp = "127.0.0.1";
-    uint16_t slavePort = 8080;
-    uint16_t slaveDataPort = 9000;
-    std::string slaveUuid = "b5279485-720d-4542-9f29-bee4d9a75ef9";
+    std::shared_ptr<SlaveDescription_t> slaveDescription;
 
 
 };

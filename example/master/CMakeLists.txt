@@ -16,11 +16,13 @@ add_definitions("-DDEBUG")
 
 find_package(DCPLib REQUIRED)
 find_package(Threads REQUIRED)
+find_package(XercesC REQUIRED)
+
 
 include_directories("src")
 
 file(GLOB_RECURSE dcpmaster_src_files src/*.cpp src/*.h )
 add_executable(dcpmaster ${dcpmaster_src_files})
-target_link_libraries(dcpmaster DCPLib::Ethernet DCPLib::Master)
+target_link_libraries(dcpmaster DCPLib::Ethernet DCPLib::Master DCPLib::Xml)
 
 install(TARGETS dcpmaster DESTINATION bin)
