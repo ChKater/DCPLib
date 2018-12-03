@@ -621,7 +621,7 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                         PARSE_ATTR_INT(DataPipe, endpointAddress, uint8_t)
                         PARSE_ATTR_INT(DataPipe, intervall, uint8_t)
                         slaveDescription->TransportProtocols.USB->dataPipes.push_back(
-                                make_DataPipe(*direction == "In" ? Direction_t::USB_DIR_IN : Direction_t::USB_DIR_OUT,
+                                make_DataPipe(*direction == "In" ? Direction::USB_DIR_IN : Direction::USB_DIR_OUT,
                                               *endpointAddress, *intervall));
                     }
                 }
@@ -633,7 +633,7 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                 DEFINE_LOOP_HEAD(transportNode, Address) {
                     DEFINE_NODE_ITEM(Address)
                     PARSE_NODE_NAME(Address)
-                    if (AddressNodeName == "DataPipe") {
+                    if (AddressNodeName == "Address") {
                         PARSE_ATTR_STRING(Address, bd_addr)
                         PARSE_ATTR_INT(Address, port, uint8_t)
                         Address_t address = make_Address(*bd_addr, *port);
