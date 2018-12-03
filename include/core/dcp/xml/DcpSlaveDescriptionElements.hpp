@@ -857,6 +857,7 @@ struct Variable_t {
     std::shared_ptr<double> preEdge;
     std::shared_ptr<double> postEdge;
     std::shared_ptr<uint32_t> maxConsecMissedPdus;
+    std::shared_ptr<std::string> declaredType;
     std::shared_ptr<CommonCausality_t> Input;
     std::shared_ptr<Output_t> Output;
     std::shared_ptr<CommonCausality_t> Parameter;

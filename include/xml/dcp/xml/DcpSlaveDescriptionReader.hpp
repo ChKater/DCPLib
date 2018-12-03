@@ -687,6 +687,7 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                 PARSE_ATTR_STRING(variable, variability)
 
 
+
                 Variability variabilityEnum = Variability::CONTINUOUS;
                 if (*variability == "fixed") {
                     variabilityEnum = Variability::FIXED;
@@ -1043,6 +1044,9 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                             var.preEdge = preEdge;
                             var.postEdge = postEdge;
                             var.maxConsecMissedPdus = maxConsecMissedPdus;
+                            if(declaredType != nullptr){
+                                var.declaredType = declaredType;
+                            }
                             slaveDescription->Variables.push_back(var);
                         }
                     }
