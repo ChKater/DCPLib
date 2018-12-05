@@ -951,18 +951,18 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                                             }
                                         }
                                     } else if (dataTypeNodeName == "Dependencies") {
-                                        std::shared_ptr<Dependencies_t> dependencies = make_Dependencies_ptr();
+                                        output->Dependencies = make_Dependencies_ptr();
                                         DEFINE_LOOP_HEAD(dataTypeNode, state) {
                                             DEFINE_NODE_ITEM(state)
                                             if (IS_ELEMENT(state)) {
                                                 PARSE_NODE_NAME(state)
                                                 if (stateNodeName == "Initialization" ||
                                                     stateNodeName == "Run") {
-                                                    DependencyState_t &depState = dependencies->Initialization;
+                                                    DependencyState_t* depState =  &output->Dependencies->Initialization;
                                                     if (stateNodeName == "Run") {
-                                                        depState = dependencies->Run;
+                                                        depState =  &output->Dependencies->Run;
                                                     }
-                                                    PARSE_AND_ASSIGN_BOOL(state, depState, none)
+                                                    PARSE_AND_ASSIGN_BOOL_PTR(state, depState, none)
                                                     DEFINE_LOOP_HEAD(stateNode, Dependency) {
                                                         DEFINE_NODE_ITEM(Dependency)
                                                         if (IS_ELEMENT(Dependency)) {
@@ -970,7 +970,7 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                                                             if (DependencyNodeName == "Dependency") {
                                                                 PARSE_ATTR_INT(Dependency, vr, uint64_t)
                                                                 PARSE_ATTR_STRING(Dependency, dependenciesKind);
-                                                                depState.dependecies.push_back(make_Dependency(*vr,
+                                                                depState->dependecies.push_back(make_Dependency(*vr,
                                                                                                                *dependenciesKind ==
                                                                                                                "dependent"
                                                                                                                ?
