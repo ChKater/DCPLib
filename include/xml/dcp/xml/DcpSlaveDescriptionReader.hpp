@@ -177,7 +177,6 @@ for (XMLSize_t ix = 0; ix < name##Count; ++ix)
     simpleType.node->gradient = gradient;\
     slaveDescription->TypeDefinitions.push_back(simpleType);\
 
-
 class AciDescriptionReaderErrorHandler : public xercesc::ErrorHandler {
 public:
     void warning(const xercesc::SAXParseException &ex);
@@ -456,23 +455,37 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                             } else if (dataTypeNodeName == "Uint64") {
                                 PARSE_INT_DATATYPE_SIMPLE_TYPE(Uint64, uint64_t)
                             } else if (dataTypeNodeName == "Float32") {
-                                PARSE_INT_DATATYPE_SIMPLE_TYPE(Float32, float32_t)
+                                PARSE_ATTR_FLOAT(dataType, min)
+                                PARSE_ATTR_FLOAT(dataType, max)
+                                PARSE_ATTR_FLOAT(dataType, gradient)
                                 PARSE_ATTR_FLOAT(dataType, nominal)
+                                PARSE_ATTR_STRING(dataType, start)
                                 PARSE_ATTR_STRING(dataType, quantity)
                                 PARSE_ATTR_STRING(dataType, unit)
                                 PARSE_ATTR_STRING(dataType, displayUnit)
+                                SimpleType_t simpleType = make_SimpleType<float32_t>(*name);\
+                                simpleType.Float32->min = min;
+                                simpleType.Float32->max = max;
+                                simpleType.Float32->gradient = gradient;
                                 simpleType.Float32->nominal = nominal;
-                                simpleType.Float32->quantitiy = quantity;
+                                simpleType.Float32->quantity = quantity;
                                 simpleType.Float32->unit = unit;
                                 simpleType.Float32->displayUnit = displayUnit;
                             } else if (dataTypeNodeName == "Float64") {
-                                PARSE_INT_DATATYPE_SIMPLE_TYPE(Float64, float64_t)
+                                PARSE_ATTR_DOUBLE(dataType, min)
+                                PARSE_ATTR_DOUBLE(dataType, max)
+                                PARSE_ATTR_DOUBLE(dataType, gradient)
                                 PARSE_ATTR_DOUBLE(dataType, nominal)
+                                PARSE_ATTR_STRING(dataType, start)
                                 PARSE_ATTR_STRING(dataType, quantity)
                                 PARSE_ATTR_STRING(dataType, unit)
                                 PARSE_ATTR_STRING(dataType, displayUnit)
+                                SimpleType_t simpleType = make_SimpleType<float64_t>(*name);\
+                                simpleType.Float64->min = min;
+                                simpleType.Float64->max = max;
+                                simpleType.Float64->gradient = gradient;
                                 simpleType.Float64->nominal = nominal;
-                                simpleType.Float64->quantitiy = quantity;
+                                simpleType.Float64->quantity = quantity;
                                 simpleType.Float64->displayUnit = displayUnit;
                                 simpleType.Float64->unit = unit;
                             } else if (dataTypeNodeName == "String") {
@@ -744,7 +757,7 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                                         causality->Float32->max = max;
                                         causality->Float32->gradient = gradient;
                                         causality->Float32->nominal = nominal;
-                                        causality->Float32->quantitiy = quantity;
+                                        causality->Float32->quantity = quantity;
                                         causality->Float32->unit = unit;
                                         causality->Float32->displayUnit = displayUnit;
                                     } else if (dataTypeNodeName == "Float64") {
@@ -764,7 +777,7 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                                         causality->Float64->max = max;
                                         causality->Float64->gradient = gradient;
                                         causality->Float64->nominal = nominal;
-                                        causality->Float64->quantitiy = quantity;
+                                        causality->Float64->quantity = quantity;
                                         causality->Float64->unit = unit;
                                         causality->Float64->displayUnit = displayUnit;
                                     } else if (dataTypeNodeName == "String") {
@@ -877,7 +890,7 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                                         output->Float32->max = max;
                                         output->Float32->gradient = gradient;
                                         output->Float32->nominal = nominal;
-                                        output->Float32->quantitiy = quantity;
+                                        output->Float32->quantity = quantity;
                                         output->Float32->unit = unit;
                                         output->Float32->displayUnit = displayUnit;
                                     } else if (dataTypeNodeName == "Float64") {
@@ -899,7 +912,7 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                                         output->Float64->max = max;
                                         output->Float64->gradient = gradient;
                                         output->Float64->nominal = nominal;
-                                        output->Float64->quantitiy = quantity;
+                                        output->Float64->quantity = quantity;
                                         output->Float64->unit = unit;
                                         output->Float64->displayUnit = displayUnit;
                                     } else if (dataTypeNodeName == "String") {
