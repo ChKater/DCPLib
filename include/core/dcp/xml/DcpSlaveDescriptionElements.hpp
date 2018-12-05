@@ -221,17 +221,26 @@ static std::shared_ptr<Ethernet_t> make_TCP_ptr() {
     return udp;
 }
 
-enum class Direction_t {
+enum class Direction {
     USB_DIR_IN, USB_DIR_OUT
 };
 
+static std::string to_string(Direction dir){
+    switch(dir){
+        case Direction::USB_DIR_IN:
+            return "In";
+        case Direction::USB_DIR_OUT:
+            return "Out";
+    }
+}
+
 struct DataPipe_t {
-    Direction_t direction;
+    Direction direction;
     uint8_t endpointAddress;
-    uint8_t interval;
+    uint8_t intervall;
 };
 
-static DataPipe_t make_DataPipe(Direction_t direction, uint8_t endpointAddress, uint8_t interval) {
+static DataPipe_t make_DataPipe(Direction direction, uint8_t endpointAddress, uint8_t interval) {
     return {direction, endpointAddress, interval};
 }
 
@@ -250,7 +259,7 @@ static std::shared_ptr<USB_t> make_USB_ptr(){
 }
 
 struct Address_t {
-    std::string bdAddr;
+    std::string bd_addr;
     uint8_t port;
     std::shared_ptr<std::string> alias;
 };
@@ -318,13 +327,13 @@ struct IntegerDataType_t : public SimpleIntegerDataType<T> {
 template<typename T>
 struct SimpleFloatDataType_t : public SimpleIntegerDataType<T> {
     std::shared_ptr<T> nominal;
-    std::shared_ptr<std::string> quantitiy;
+    std::shared_ptr<std::string> quantity;
     std::shared_ptr<std::string> unit;
     std::shared_ptr<std::string> displayUnit;
 
     SimpleFloatDataType_t()
             : SimpleIntegerDataType<T>(), nominal(std::shared_ptr<T>(nullptr)),
-              quantitiy(std::shared_ptr<std::string>(nullptr)), unit(std::shared_ptr<std::string>(nullptr)),
+              quantity(std::shared_ptr<std::string>(nullptr)), unit(std::shared_ptr<std::string>(nullptr)),
               displayUnit(std::shared_ptr<std::string>(nullptr)) {}
 };
 
@@ -360,6 +369,14 @@ struct BinaryStartValue {
     uint32_t length;
 };
 
+static std::string to_string(BinaryStartValue& binaryStartValue){
+    std::stringstream hs;
+    for (size_t i = 0; i < binaryStartValue.length; ++i)
+        hs << std::uppercase << std::hex << std::setw(2) << std::setfill('0')
+           << (int) binaryStartValue.value[i];
+    return hs.str();
+}
+
 struct SimpleBinaryDataType_t {
     std::shared_ptr<std::string> mimeType;
     std::shared_ptr<uint32_t> maxSize;
@@ -380,6 +397,15 @@ struct BinaryDataType_t : public SimpleBinaryDataType_t{
 enum class DimensionType {
     CONSTANT, LINKED_VR
 };
+
+static std::string to_string(DimensionType dim){
+    switch(dim){
+        case DimensionType::CONSTANT:
+            return "CONSTANT";
+        case DimensionType::LINKED_VR:
+            return "LINKED_VR";
+    }
+}
 struct Dimension_t {
     DimensionType type;
     uint64_t value;
@@ -392,6 +418,15 @@ static Dimension_t make_Dimension(DimensionType type, uint64_t value){
 enum class DependenciesKind {
     DEPENDENT, LINEAR
 };
+
+static std::string to_string(DependenciesKind kind){
+    switch(kind){
+        case DependenciesKind::DEPENDENT:
+            return "dependent";
+        case DependenciesKind::LINEAR:
+            return "linear";
+    }
+}
 
 struct Dependency_t {
     valueReference_t vr;
@@ -849,6 +884,19 @@ enum class Variability {
     FIXED, TUNABLE, DISCRETE, CONTINUOUS,
 };
 
+static std::string to_string(Variability variability){
+    switch(variability){
+        case Variability::FIXED:
+            return "fixed";
+        case Variability::TUNABLE:
+            return "tunable";
+        case Variability::DISCRETE:
+            return "discrete";
+        case Variability::CONTINUOUS:
+            return "continuous";
+    }
+}
+
 struct Variable_t {
     std::string name;
     valueReference_t valueReference;
@@ -868,7 +916,7 @@ static Variable_t
 make_Variable_input(std::string name, valueReference_t valueReference, std::shared_ptr<CommonCausality_t> Input) {
     return {name, valueReference, std::shared_ptr<std::string>(), Variability::CONTINUOUS,
             std::shared_ptr<double>(), std::shared_ptr<double>(),
-            std::shared_ptr<uint32_t>(), std::move(Input), std::shared_ptr<Output_t>(nullptr),
+            std::shared_ptr<uint32_t>(), std::shared_ptr<std::string>(), std::move(Input), std::shared_ptr<Output_t>(nullptr),
             std::shared_ptr<CommonCausality_t>(nullptr), std::shared_ptr<StructuralParameter_t>(nullptr)};
 }
 
@@ -876,7 +924,7 @@ static Variable_t
 make_Variable_output(std::string name, valueReference_t valueReference, std::shared_ptr<Output_t> Output) {
     return {name, valueReference, std::shared_ptr<std::string>(), Variability::CONTINUOUS,
             std::shared_ptr<double>(), std::shared_ptr<double>(),
-            std::shared_ptr<uint32_t>(), std::shared_ptr<CommonCausality_t>(nullptr), std::move(Output),
+            std::shared_ptr<uint32_t>(), std::shared_ptr<std::string>(), std::shared_ptr<CommonCausality_t>(nullptr), std::move(Output),
             std::shared_ptr<CommonCausality_t>(nullptr), std::shared_ptr<StructuralParameter_t>(nullptr)};
 }
 
@@ -885,7 +933,7 @@ make_Variable_parameter(std::string name, valueReference_t valueReference,
                         std::shared_ptr<CommonCausality_t> Parameter) {
     return {name, valueReference, std::shared_ptr<std::string>(), Variability::CONTINUOUS,
             std::shared_ptr<double>(), std::shared_ptr<double>(),
-            std::shared_ptr<uint32_t>(), std::shared_ptr<CommonCausality_t>(nullptr), std::shared_ptr<Output_t>(nullptr),
+            std::shared_ptr<uint32_t>(), std::shared_ptr<std::string>(), std::shared_ptr<CommonCausality_t>(nullptr), std::shared_ptr<Output_t>(nullptr),
             std::move(Parameter), std::shared_ptr<StructuralParameter_t>(nullptr)};
 }
 
@@ -894,7 +942,7 @@ make_Variable_structuralParameter(std::string name, valueReference_t valueRefere
                                   std::shared_ptr<StructuralParameter_t> StructuralParameter) {
     return {name, valueReference, std::shared_ptr<std::string>(), Variability::CONTINUOUS,
             std::shared_ptr<double>(), std::shared_ptr<double>(),
-            std::shared_ptr<uint32_t>(), std::shared_ptr<CommonCausality_t>(nullptr), std::shared_ptr<Output_t>(nullptr),
+            std::shared_ptr<uint32_t>(), std::shared_ptr<std::string>(), std::shared_ptr<CommonCausality_t>(nullptr), std::shared_ptr<Output_t>(nullptr),
             std::shared_ptr<CommonCausality_t>(nullptr),
             std::move(StructuralParameter)};
 }
@@ -928,9 +976,18 @@ static std::shared_ptr<Log_t> make_Log_ptr() {
     return std::shared_ptr<Log_t>(new Log_t());
 }
 
-enum VariableNamingConvention {
+enum class VariableNamingConvention :uint8_t {
     FLAT, STRUCTURED
 };
+
+static std::string to_string(VariableNamingConvention variableNamingConvention){
+    switch(variableNamingConvention){
+        case VariableNamingConvention::FLAT:
+            return "flat";
+        case VariableNamingConvention::STRUCTURED:
+            return "structured";
+    }
+}
 
 struct SlaveDescription_t {
     OpMode_t OpMode;
