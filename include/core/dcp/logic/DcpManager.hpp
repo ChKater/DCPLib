@@ -5,8 +5,8 @@
 #ifndef DCPLIB_DCPMANAGERCALLBACKS_H
 #define DCPLIB_DCPMANAGERCALLBACKS_H
 
-#include "dcp/model/DcpConstants.hpp"
-#include "dcp/model/DcpPdu.hpp"
+#include <dcp/model/pdu/DcpPdu.hpp>
+#include <dcp/model/constant/DcpError.hpp>
 
 struct DcpManager{
     std::function<void(DcpPdu&)> receive;

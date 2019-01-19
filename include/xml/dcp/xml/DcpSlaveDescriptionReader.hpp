@@ -5,7 +5,6 @@
 #include <vector>
 #include <limits>
 
-#include <dcp/model/DcpConstants.hpp>
 #include <dcp/model/DcpTypes.hpp>
 #include <dcp/xml/DcpSlaveDescriptionElements.hpp>
 #include <dcp/xml/XSD.hpp>

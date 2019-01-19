@@ -5,8 +5,7 @@
 #ifndef DCPLIB_ERRORCODES_H
 #define DCPLIB_ERRORCODES_H
 
-#include <dcp/model/DcpConstants.hpp>
-#include <dcp/log/LogTemplate.hpp>
+#include <dcp/model/LogTemplate.hpp>
 
 static const LogTemplate NEW_SOCKET = LogTemplate(logId++, LogCategory::DCP_LIB_ETHERNET,
                                            DcpLogLevel::LVL_DEBUG, "%string socket opened on %string",

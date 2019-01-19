@@ -7,9 +7,10 @@
 
 
 #include <vector>
-#include "dcp/model/DcpConstants.hpp"
-#include "dcp/model/DcpString.hpp"
-#include "dcp/model/DcpBinary.hpp"
+#include <dcp/helper/Helper.hpp>
+#include <dcp/model/constant/DcpDataType.hpp>
+#include <dcp/model/DcpString.hpp>
+#include <dcp/model/DcpBinary.hpp>
 
 
 #define CAST(T1, T2)\
@@ -49,8 +50,7 @@ public:
     }
 
     template<typename T>
-    void updateValue(size_t index, T value){
-        DcpDataType dataType = getFixedSizeDcpDataType<T>();
+    void updateValue(size_t index, DcpDataType dataType, T value){
         size_t baseSize = getDcpDataTypeSize(dataType);
         update((uint8_t*) &value, baseSize * index, dataType);
     }

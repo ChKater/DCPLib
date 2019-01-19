@@ -9,65 +9,53 @@
 #define ACI_LOGIC_DRIVERMANAGERSLAVE_H_
 
 
-#include <chrono>
 #include <map>
-#include <utility>
 #include <vector>
 #include <set>
-#include <mutex>
-#include <thread>
-#include <algorithm>
-#include <condition_variable>
-#include <stdexcept>
 #include <iterator>
-#include <stdio.h>
-#include <string.h>
 
-#include "dcp/model/DcpTypes.hpp"
-#include "dcp/model/DcpPdu.hpp"
-#include "dcp/model/DcpConstants.hpp"
-#include "dcp/model/MultiDimValue.hpp"
+#include <dcp/model/DcpTypes.hpp>
+#include <dcp/model/pdu/DcpPdu.hpp>
+#include <dcp/model/pdu/DcpPduBasic.hpp>
+#include <dcp/model/pdu/DcpPduCfgInput.hpp>
+#include <dcp/model/pdu/DcpPduCfgLogging.hpp>
+#include <dcp/model/pdu/DcpPduCfgNetworkInformation.hpp>
+#include <dcp/model/pdu/DcpPduCfgOutput.hpp>
+#include <dcp/model/pdu/DcpPduCfgParameter.hpp>
+#include <dcp/model/pdu/DcpPduCfgParamNetworkInformation.hpp>
+#include <dcp/model/pdu/DcpPduCfgScope.hpp>
+#include <dcp/model/pdu/DcpPduCfgSteps.hpp>
+#include <dcp/model/pdu/DcpPduCfgTimeRes.hpp>
+#include <dcp/model/pdu/DcpPduCfgTunableParameter.hpp>
+#include <dcp/model/pdu/DcpPduDatInputOutput.hpp>
+#include <dcp/model/pdu/DcpPduDatParameter.hpp>
+#include <dcp/model/pdu/DcpPduInfLog.hpp>
+#include <dcp/model/pdu/DcpPduNtfLog.hpp>
+#include <dcp/model/pdu/DcpPduNtfStateChanged.hpp>
+#include <dcp/model/pdu/DcpPduRspAck.hpp>
+#include <dcp/model/pdu/DcpPduRspLogAck.hpp>
+#include <dcp/model/pdu/DcpPduRspNegative.hpp>
+#include <dcp/model/pdu/DcpPduRspStateAck.hpp>
+#include <dcp/model/pdu/DcpPduStc.hpp>
+#include <dcp/model/pdu/DcpPduStcDoStep.hpp>
+#include <dcp/model/pdu/DcpPduStcRegister.hpp>
+#include <dcp/model/pdu/DcpPduStcRun.hpp>
+#include <dcp/model/MultiDimValue.hpp>
 
-#include "dcp/helper/Helper.hpp"
-#include "dcp/helper/DcpSlaveDescriptionHelper.hpp"
+#include <dcp/helper/Helper.hpp>
+#include <dcp/helper/DcpSlaveDescriptionHelper.hpp>
 
-#include "dcp/logic/AbstractDcpManager.hpp"
-#include "dcp/xml/DcpSlaveDescriptionElements.hpp"
+#include <dcp/logic/AbstractDcpManager.hpp>
+#include <dcp/xml/DcpSlaveDescriptionElements.hpp>
+
+#if defined(DEBUG) || defined(LOGGING)
+#include <dcp/logic/DCPSlaveErrorCodes.hpp>
+#endif
 
 #ifdef ERROR
 /* windows has already an error define */
 #undef ERROR_LI
 #endif
-
-
-#define ALLOWED_INPUT_OUTPUT(input, b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11) \
-case DcpDataType::input: \
-    switch(output){ \
-    case DcpDataType::uint8: \
-        return b0;\
-    case DcpDataType::uint16:\
-        return b1;\
-    case DcpDataType::uint32:\
-        return b2;\
-    case DcpDataType::uint64:\
-        return b3;\
-    case DcpDataType::int8:\
-        return b4;\
-    case DcpDataType::int16:\
-        return b5;\
-    case DcpDataType::int32:\
-        return b6;\
-    case DcpDataType::int64:\
-        return b7;\
-    case DcpDataType::float32:\
-        return b8;\
-    case DcpDataType::float64:\
-        return b9;\
-    case DcpDataType::string:\
-        return b10;\
-    case DcpDataType::binary:\
-        return b11;\
-    }
 
 struct Payload {
     uint8_t *payload;
@@ -76,7 +64,7 @@ struct Payload {
 
 
 /**
- * Aci Logic for an slave
+ * Basic Logic for a DCP slave
  *
  * @author Christian Kater
  */
@@ -147,9 +135,9 @@ public:
                     state = DcpState::RUNNING;
                 }
                 notifyStateChange();
-                DcpPduRun &_run = static_cast<DcpPduRun &>(msg);
+                DcpPduStcRun &_run = static_cast<DcpPduStcRun &>(msg);
                 if (opMode != DcpOpMode::NRT) {
-                    setRuntime(_run.getStartTime());
+                    notifyRuntimeListener(_run.getStartTime());
                     run(_run.getStartTime());
                 }
                 break;
@@ -158,7 +146,7 @@ public:
                 runLastExitPoint = state;
                 state = DcpState::COMPUTING;
                 notifyStateChange();
-                DcpPduDoStep &doStepPdu = static_cast<DcpPduDoStep &>(msg);
+                DcpPduStcDoStep &doStepPdu = static_cast<DcpPduStcDoStep &>(msg);
                 doStep(doStepPdu.getSteps());
                 break;
             }
@@ -178,7 +166,7 @@ public:
                 updateLastStateRequest();
                 DcpPduBasic &basic = static_cast<DcpPduBasic &>(msg);
 
-                DcpPduStateAck stateAck = {state == DcpState::ALIVE ? basic.getReceiver() : dcpId, basic.getPduSeqId(),
+                DcpPduRspStateAck stateAck = {state == DcpState::ALIVE ? basic.getReceiver() : dcpId, basic.getPduSeqId(),
                                            state};
                 driver.send(stateAck);
                 break;
@@ -186,24 +174,24 @@ public:
             case DcpPduType::INF_error: {
                 DcpPduBasic &basic = static_cast<DcpPduBasic &>(msg);
 
-                DcpPduNack errorAck = {DcpPduType::RSP_error_ack,
+                DcpPduRspNegative errorAck = {DcpPduType::RSP_error_ack,
                                        state == DcpState::ALIVE ? basic.getReceiver() : dcpId,
                                        basic.getPduSeqId(), errorCode};
                 driver.send(errorAck);
                 break;
             }
-            case DcpPduType::CFG_set_time_res: {
-                DcpPduSetTimeRes timeRes = static_cast<DcpPduSetTimeRes &>(msg);
+            case DcpPduType::CFG_time_res: {
+                DcpPduCfgTimeRes timeRes = static_cast<DcpPduCfgTimeRes &>(msg);
                 setTimeRes(timeRes.getNumerator(), timeRes.getDenominator());
                 break;
             }
-            case DcpPduType::CFG_set_steps: {
-                DcpPduSetSteps &stepsMSG = static_cast<DcpPduSetSteps &>(msg);
+            case DcpPduType::CFG_steps: {
+                DcpPduCfgSteps &stepsMSG = static_cast<DcpPduCfgSteps &>(msg);
                 setSteps(stepsMSG.getDataId(), stepsMSG.getSteps());
                 break;
             }
             case DcpPduType::STC_register: {
-                DcpPduRegister registerPdu = static_cast<DcpPduRegister &>(msg);
+                DcpPduStcRegister registerPdu = static_cast<DcpPduStcRegister &>(msg);
                 setOperationInformation(registerPdu.getReceiver(), registerPdu.getOpMode());
                 seqAtRegister = registerPdu.getPduSeqId();
                 segNumsIn[masterId] = seqAtRegister;
@@ -217,7 +205,7 @@ public:
                 break;
             }
             case DcpPduType::STC_deregister: {
-                opMode = DcpOpMode::RT;
+                opMode = DcpOpMode::HRT;
                 clearConfig();
                 state = DcpState::ALIVE;
                 notifyStateChange();
@@ -225,8 +213,8 @@ public:
                 driver.disconnect();
                 break;
             }
-            case DcpPduType::CFG_config_input: {
-                DcpPduConfigInput &inputConfig = static_cast<DcpPduConfigInput &>(msg);
+            case DcpPduType::CFG_input: {
+                DcpPduCfgInput &inputConfig = static_cast<DcpPduCfgInput &>(msg);
                 configuredInPos[inputConfig.getDataId()].push_back(inputConfig.getPos());
                 inputAssignment[inputConfig.getDataId()][inputConfig.getPos()] = std::make_pair(
                         inputConfig.getTargetVr(),
@@ -239,8 +227,8 @@ public:
                 break;
             }
 
-            case DcpPduType::CFG_config_output: {
-                DcpPduConfigOutput &outputConfig = static_cast<DcpPduConfigOutput &>(msg);
+            case DcpPduType::CFG_output: {
+                DcpPduCfgOutput &outputConfig = static_cast<DcpPduCfgOutput &>(msg);
                 if (outputAssignment.find(outputConfig.getDataId()) == outputAssignment.end()) {
                     outputAssignment.insert(
                             std::make_pair(outputConfig.getDataId(),
@@ -259,7 +247,7 @@ public:
                 break;
 
             }
-            case DcpPduType::CFG_config_clear: {
+            case DcpPduType::CFG_clear: {
                 clearConfig();
                 segNumsIn[masterId] = seqAtRegister + 1;
 #ifdef DEBUG
@@ -340,8 +328,8 @@ public:
                 }
                 break;
             }
-            case DcpPduType::CFG_set_parameter: {
-                DcpPduSetParameter &parameter = static_cast<DcpPduSetParameter &>(msg);
+            case DcpPduType::CFG_parameter: {
+                DcpPduCfgParameter &parameter = static_cast<DcpPduCfgParameter &>(msg);
                 uint64_t &valueReference = parameter.getParameterVr();
                 if (slavedescription::structuralParameterExists(slaveDescription, valueReference)) {
                     values[valueReference]->update(parameter.getConfiguration(), 0,
@@ -373,8 +361,8 @@ public:
                 }
                 break;
             }
-            case DcpPduType::CFG_config_tunable_parameter: {
-                DcpPduConfigTunableParameter &paramConfig = static_cast<DcpPduConfigTunableParameter &>(msg);
+            case DcpPduType::CFG_tunable_parameter: {
+                DcpPduCfgTunableParameter &paramConfig = static_cast<DcpPduCfgTunableParameter &>(msg);
                 configuredParamPos[paramConfig.getParamId()].push_back(paramConfig.getPos());
                 paramAssignment[paramConfig.getParamId()][paramConfig.getPos()] = std::make_pair(
                         paramConfig.getParameterVr(),
@@ -386,8 +374,8 @@ public:
                 break;
 
             }
-            case DcpPduType::CFG_set_scope: {
-                DcpPduSetScope &setScope = static_cast<DcpPduSetScope &>(msg);
+            case DcpPduType::CFG_scope: {
+                DcpPduCfgScope &setScope = static_cast<DcpPduCfgScope &>(msg);
                 const DcpScope scope = setScope.getScope();
                 uint16_t dataId = setScope.getDataId();
 
@@ -396,40 +384,42 @@ public:
                                           initializationScope.end());
 
 
-                if (scope == DcpScope::RUNNING || scope == DcpScope::CONFIGURED_INITIALIZING_INITIALIZED_RUNNING) {
+                if (scope == DcpScope::Run_NonRealTime || scope == DcpScope::Initialization_Run_NonRealTime) {
                     runningScope.push_back(dataId);
                 }
-                if (scope == DcpScope::CONFIGURED_INITIALIZING_INITIALIZED ||
-                    scope == DcpScope::CONFIGURED_INITIALIZING_INITIALIZED_RUNNING) {
+                if (scope == DcpScope::Initialization ||
+                    scope == DcpScope::Initialization_Run_NonRealTime) {
                     initializationScope.push_back(dataId);
                 }
 
                 break;
 
             }
-            case DcpPduType::CFG_set_source_network_information: {
-                DcpPduSetNetworkInformation &netInf = static_cast<DcpPduSetNetworkInformation &>(msg);
+            case DcpPduType::CFG_source_network_information: {
+                DcpPduCfgNetworkInformation &netInf = static_cast<DcpPduCfgNetworkInformation &>(msg);
                 sourceNetworkConfigured.insert(netInf.getDataId());
                 driver.setSourceNetworkInformation(netInf.getDataId(), netInf.getNetworkInformation());
                 break;
             }
-            case DcpPduType::CFG_set_target_network_information: {
-                DcpPduSetNetworkInformation &netInf = static_cast<DcpPduSetNetworkInformation &>(msg);
+            case DcpPduType::CFG_target_network_information: {
+                DcpPduCfgNetworkInformation &netInf = static_cast<DcpPduCfgNetworkInformation &>(msg);
                 targetNetworkConfigured.insert(netInf.getDataId());
                 driver.setTargetNetworkInformation(netInf.getDataId(), netInf.getNetworkInformation());
                 break;
             }
-            case DcpPduType::CFG_set_param_network_information: {
-                DcpPduSetParamNetworkInformation &netInf = static_cast<DcpPduSetParamNetworkInformation &>(msg);
+            case DcpPduType::CFG_param_network_information: {
+                DcpPduCfgParamNetworkInformation &netInf = static_cast<DcpPduCfgParamNetworkInformation &>(msg);
                 paramNetworkConfigured.insert(netInf.getParamId());
                 driver.setParamNetworkInformation(netInf.getParamId(), netInf.getNetworkInformation());
                 break;
             }
             case DcpPduType::INF_log: {
+#if defined(DEBUG) || defined(LOGGING)
                 DcpPduInfLog &log = static_cast<DcpPduInfLog &>(msg);
                 size_t currentSize = 0;
                 uint8_t numLogs = 0;
-                DcpPduLogAck logAck = {dcpId, log.getPduSeqId(), logRspBuffer, bufferSize};
+
+                DcpPduRspLogAck logAck = {dcpId, log.getPduSeqId(), logRspBuffer, bufferSize};
                 std::vector<Payload> &logs = logBuffer[log.getLogCategory()];
                 while (numLogs < log.getLogMaxNum() && logs.size() > 0 &&
                        (logs.front().size + currentSize) < bufferSize) {
@@ -442,10 +432,13 @@ public:
                 }
                 logAck.setPduSize(currentSize);
                 driver.send(logAck);
+#endif
                 break;
             }
-            case DcpPduType::CFG_set_logging: {
-                DcpPduSetLogging &logging = static_cast<DcpPduSetLogging &>(msg);
+            case DcpPduType::CFG_logging: {
+#if defined(DEBUG) || defined(LOGGING)
+
+                DcpPduCfgLogging &logging = static_cast<DcpPduCfgLogging &>(msg);
                 uint8_t categoryStart = 1;
                 uint8_t categoryEnd = 255;
                 std::map<logCategory_t, std::map<DcpLogLevel, bool>> &map = logOnRequest;
@@ -462,17 +455,9 @@ public:
                     map[i][logging.getLogLevel()] = true;
                     notMap[i][logging.getLogLevel()] = false;
                 }
+#endif
                 break;
             }
-        }
-    }
-
-    virtual void reportError(const DcpError errorCode) override {
-        if (asynchronousCallback[DcpCallbackTypes::ERROR_LI]) {
-            std::thread t(errorListener, errorCode);
-            t.detach();
-        } else {
-            errorListener(errorCode);
         }
     }
 
@@ -548,362 +533,6 @@ public:
     }
 
 
-    /**
-     * Set the callback for action followed by a STC_prepare PDU
-     * @tparam ftype ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-     * @param prepareCallback function which will be called after the event occurs
-     *
-     * @post IF ftype == ASYNC: prepareFinished needs to be called after finishing preparing action
-     */
-    template<FunctionType ftype>
-    void setPrepareCallback(std::function<void()> prepareCallback) {
-        this->prepareCallback = std::move(prepareCallback);
-        asynchronousCallback[DcpCallbackTypes::PREPARE] = ftype == ASYNC;
-    }
-
-    /**
-	 * Set the callback for action followed by a STC_configure PDU
-	 * @tparam ftype ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-	 * @param prepareCallback function which will be called after the event occurs
-	 *
-	 * @post IF ftype == ASYNC: configureFinished needs to be called after finishing configuring action
-	 */
-    template<FunctionType ftype>
-    void setConfigureCallback(std::function<void()> configureCallback) {
-        this->configureCallback = std::move(configureCallback);
-        asynchronousCallback[DcpCallbackTypes::CONFIGURE] = ftype == ASYNC;
-    }
-
-    /**
-    * Set the callback for a step in state SYNCHRONIZING and operation mode NRT
-    * @tparam ftype ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param prepareCallback function which will be called after the event occurs
-    *
-    * @post IF ftype == ASYNC: simulationStepFinished needs to be called after finishing configuring action
-    */
-    template<FunctionType ftype>
-    void setSynchronizingNRTStepCallback(std::function<void(uint64_t steps)> synchronizingNRTStepCallback) {
-        this->synchronizingNRTStepCallback = std::move(synchronizingNRTStepCallback);
-        asynchronousCallback[DcpCallbackTypes::SYNCHRONIZING_NRT_STEP] = ftype == ASYNC;
-    }
-
-    /**
-   * Set the callback for a step in state SYNCHRONIZED and operation mode NRT
-   * @tparam ftype ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-   * @param prepareCallback function which will be called after the event occurs
-   *
-   * @post IF ftype == ASYNC: simulationStepFinished needs to be called after finishing configuring action
-   */
-    template<FunctionType ftype>
-    void setSynchronizedNRTStepCallback(std::function<void(uint64_t steps)> synchronizedNRTStepCallback) {
-        this->synchronizedNRTStepCallback = std::move(synchronizedNRTStepCallback);
-        asynchronousCallback[DcpCallbackTypes::SYNCHRONIZED_NRT_STEP] = ftype == ASYNC;
-    }
-
-    /**
-    * Set the callback for a step in state RUNNING and operation mode NRT
-    * @tparam ftype ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param prepareCallback function which will be called after the event occurs
-    *
-    * @post IF ftype == ASYNC: simulationStepFinished needs to be called after finishing configuring action
-    */
-    template<FunctionType ftype>
-    void setRunningNRTStepCallback(std::function<void(uint64_t steps)> runningNRTStepCallback) {
-        this->runningNRTStepCallback = std::move(runningNRTStepCallback);
-        asynchronousCallback[DcpCallbackTypes::RUNNING_NRT_STEP] = ftype == ASYNC;
-    }
-
-    /**
-    * Set the callback for a realtime step in state SYNCHRONIZING and operation mode SRT or HRT
-    * @tparam ftype ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param prepareCallback function which will be called after the event occurs
-    *
-    * @post IF ftype == ASYNC: simulationStepFinished needs to be called after finishing configuring action
-    */
-    template<FunctionType ftype>
-    void setSynchronizingStepCallback(std::function<void(uint64_t steps)> synchronizingStepCallback) {
-        this->synchronizingStepCallback = std::move(synchronizingStepCallback);
-        asynchronousCallback[DcpCallbackTypes::SYNCHRONIZING_STEP] = ftype == ASYNC;
-    }
-
-
-    /**
-    * Set the callback for a realtime step in state SYNCHRONIZED and operation mode SRT or HRT
-    * @tparam ftype ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param prepareCallback function which will be called after the event occurs
-    *
-    * @post IF ftype == ASYNC: simulationStepFinished needs to be called after finishing configuring action
-    */
-    template<FunctionType ftype>
-    void setSynchronizedStepCallback(std::function<void(uint64_t steps)> synchronizedStepCallback) {
-        this->synchronizedStepCallback = std::move(synchronizedStepCallback);
-        asynchronousCallback[DcpCallbackTypes::SYNCHRONIZED_STEP] = ftype == ASYNC;
-    }
-
-    /**
-    * Set the callback for a realtime step in state RUNNING and operation mode SRT or HRT
-    * @tparam ftype ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param prepareCallback function which will be called after the event occurs
-    *
-    * @post IF ftype == ASYNC: simulationStepFinished needs to be called after finishing configuring action
-    */
-    template<FunctionType ftype>
-    void setRunningStepCallback(std::function<void(uint64_t steps)> runningStepCallback) {
-        this->runningStepCallback = std::move(runningStepCallback);
-        asynchronousCallback[DcpCallbackTypes::RUNNING_STEP] = ftype == ASYNC;
-    }
-
-
-    /**
-     * Set the callback for action followed by a STC_stop PDU
-     * @tparam ftype ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-     * @param prepareCallback function which will be called after the event occurs
-     *
-     * @post IF ftype == ASYNC: stopFinished needs to be called after finishing preparing action
-     */
-    template<FunctionType ftype>
-    void setStopCallback(std::function<void(std::thread *runningRoutine)> stopCallback) {
-        this->stopCallback = std::move(stopCallback);
-        asynchronousCallback[DcpCallbackTypes::STOP] = ftype == ASYNC;
-    }
-
-
-    /**
-     * Set the callback for action followed by a STC_initialize PDU
-     * @tparam ftype ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-     * @param prepareCallback function which will be called after the event occurs
-     *
-     * @post IF ftype == ASYNC: initializeFinished needs to be called after finishing preparing action
-     */
-    template<FunctionType ftype>
-    void setInitializeCallback(std::function<void()> initializeCallback) {
-        this->initializeCallback = std::move(initializeCallback);
-        asynchronousCallback[DcpCallbackTypes::INITIALIZE] = ftype == ASYNC;
-    }
-
-    /**
-     * Set the callback for action followed by a STC_synchronize PDU
-     * @tparam ftype ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-     * @param prepareCallback function which will be called after the event occurs
-     *
-     * @post IF ftype == ASYNC: synchronizeFinished needs to be called after finishing preparing action
-     */
-    template<FunctionType ftype>
-    void setSynchronizeCallback(std::function<void()> synchronizeCallback) {
-        this->synchronizeCallback = std::move(synchronizeCallback);
-        asynchronousCallback[DcpCallbackTypes::SYNCHRONIZE] = ftype == ASYNC;
-    }
-
-    /**
-     * A simulation step is finished.
-     *
-     * @return True if calling is allowed and action was performed, otherwise False
-     *
-     * @pre A ASYNC callback for set{Synchronizing, Synchronized, Running}{"", NRT}Callback was called
-     *
-     */
-    bool simulationStepFinished() {
-        if (!asynchronousCallback[DcpCallbackTypes::SYNCHRONIZING_STEP] ||
-            !asynchronousCallback[DcpCallbackTypes::SYNCHRONIZED_STEP] ||
-            !asynchronousCallback[DcpCallbackTypes::RUNNING_STEP] ||
-            !asynchronousCallback[DcpCallbackTypes::SYNCHRONIZING_NRT_STEP] ||
-            !asynchronousCallback[DcpCallbackTypes::SYNCHRONIZED_NRT_STEP] ||
-            !asynchronousCallback[DcpCallbackTypes::RUNNING_NRT_STEP]) {
-            return false;
-        }
-
-        if (opMode == DcpOpMode::NRT) {
-            computingFinished();
-        } else {
-            realtimeStepFinished();
-        }
-        return true;
-    }
-
-    /**
-     * Preparing action is finished.
-     * @return True if calling is allowed and action was performed, otherwise False
-     *
-     * @pre A ASYNC callback for setPrepareCallback was called
-     */
-    bool prepareFinished() {
-        if (!asynchronousCallback[DcpCallbackTypes::PREPARE]) {
-            return false;
-        }
-        preparingFinished();
-        return true;
-    }
-
-    /**
-    * Configure action is finished.
-    * @return True if calling is allowed and action was performed, otherwise False
-    *
-    * @pre A ASYNC callback for setConfigureCallback was called
-    */
-    bool configureFinished() {
-        if (!asynchronousCallback[DcpCallbackTypes::PREPARE]) {
-            return false;
-        }
-        configuringFinished();
-        return true;
-    }
-
-    /**
-   * Stop action is finished.
-   * @return True if calling is allowed and action was performed, otherwise False
-   *
-   * @pre A ASYNC callback for setStopCallback was called
-   */
-    bool stopFinished() {
-        if (!asynchronousCallback[DcpCallbackTypes::STOP]) {
-            return false;
-        }
-        stoppingFinished();
-        return true;
-    }
-
-    /**
-    * Initialize action is finished.
-    * @return True if calling is allowed and action was performed, otherwise False
-    *
-    * @pre A ASYNC callback for setInitializeCallback was called
-    */
-    bool initializeFinished() {
-        if (!asynchronousCallback[DcpCallbackTypes::INITIALIZE]) {
-            return false;
-        }
-        initializingFinished();
-        return true;
-    }
-
-    /**
-    * Synchronize action is finished.
-    * @return True if calling is allowed and action was performed, otherwise False
-    *
-    * @pre A ASYNC callback for setSynchronizeCallback was called
-    */
-    bool synchronizeFinished() {
-        if (!asynchronousCallback[DcpCallbackTypes::SYNCHRONIZE]) {
-            return false;
-        }
-        synchronizingFinished();
-        return true;
-    }
-
-    /**
-      * Set the listener for CFG_time_res PDUs
-      * @tparam ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-      * @param errorAckReceivedListener function which will be called after the event occurs
-      */
-    template<FunctionType ftype>
-    void setTimeResListener(const std::function<void(uint32_t, uint32_t)> timeResListener) {
-        this->timeResListener = std::move(timeResListener);
-        asynchronousCallback[DcpCallbackTypes::TIME_RES] = ftype == ASYNC;
-        if (timeResolutionSet) {
-            setTimeRes(numerator, denominator);
-        }
-    }
-
-    /**
-      * Set the listener for CFG_steps PDUs
-      * @tparam ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-      * @param errorAckReceivedListener function which will be called after the event occurs
-      */
-    template<FunctionType ftype>
-    void setStepsListener(const std::function<void(uint16_t, uint32_t)> stepsListener) {
-        this->stepsListener = std::move(stepsListener);
-        asynchronousCallback[DcpCallbackTypes::STEPS] = ftype == ASYNC;
-    }
-
-    /**
-    * Set the listener for CFG_time_res PDUs
-    * @tparam ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param errorAckReceivedListener function which will be called after the event occurs
-    */
-    template<FunctionType ftype>
-    void setOperationInformationListener(const std::function<void(uint8_t, DcpOpMode)> operationInformationListener) {
-        this->operationInformationListener = std::move(operationInformationListener);
-        asynchronousCallback[DcpCallbackTypes::OPERATION_INFORMATION] = ftype == ASYNC;
-
-    }
-
-    /**
-    * Set the listener for CFG_clear PDUs
-    * @tparam ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param errorAckReceivedListener function which will be called after the event occurs
-    */
-    template<FunctionType ftype>
-    void setConfigurationClearedListener(const std::function<void()> configurationClearedListener) {
-        this->configurationClearedListener = std::move(configurationClearedListener);
-        asynchronousCallback[DcpCallbackTypes::CONFIGURATION_CLEARED] = ftype == ASYNC;
-    }
-
-    /**
-    * Set the listener for any error that may occur
-    * @tparam ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param errorAckReceivedListener function which will be called after the event occurs
-    */
-    template<FunctionType ftype>
-    void setErrorListener(const std::function<void(DcpError)> errorListener) {
-        this->errorListener = errorListener;
-        asynchronousCallback[DcpCallbackTypes::ERROR_LI] = ftype == ASYNC;
-    }
-
-    /**
-    * Set the listener for missing control PDUs
-    * @tparam ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param errorAckReceivedListener function which will be called after the event occurs
-    */
-    template<FunctionType ftype>
-    void setMissingControlPduListener(const std::function<void()> missingControlPduListener) {
-        this->missingControlPduListener = std::move(missingControlPduListener);
-        asynchronousCallback[DcpCallbackTypes::CONTROL_MISSED] = ftype == ASYNC;
-    }
-
-    /**
-    * Set the listener for missing DAT_input_output PDUs
-    * @tparam ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param errorAckReceivedListener function which will be called after the event occurs
-    */
-    template<FunctionType ftype>
-    void setMissingInputOutputPduListener(const std::function<void(uint16_t)> missingInputOutputPduListener) {
-        this->missingInputOutputPduListener = std::move(missingInputOutputPduListener);
-        asynchronousCallback[DcpCallbackTypes::IN_OUT_MISSED] = ftype == ASYNC;
-    }
-
-    /**
-    * Set the listener for missing DAT_parameter PDUs
-    * @tparam ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param errorAckReceivedListener function which will be called after the event occurs
-    */
-    template<FunctionType ftype>
-    void setMissingParameterPduListener(const std::function<void(uint16_t)> missingParameterPduListener) {
-        this->missingParameterPduListener = std::move(missingParameterPduListener);
-        asynchronousCallback[DcpCallbackTypes::PARAM_MISSED] = ftype == ASYNC;
-    }
-
-    /**
-    * Set the listener for STC_run PDUs
-    * @tparam ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param errorAckReceivedListener function which will be called after the event occurs
-    */
-    template<FunctionType ftype>
-    void setRuntimeListener(const std::function<void(int64_t)> runtimeListener) {
-        this->runtimeListener = std::move(runtimeListener);
-        asynchronousCallback[DcpCallbackTypes::RUNTIME] = ftype == ASYNC;
-    }
-
-    /**
-    * Set the listener for state changes which was made by the dcp slave manager
-    * @tparam ftype SYNC means calling the given function is blocking, ASYNC means non blocking
-    * @param errorAckReceivedListener function which will be called after the event occurs
-    */
-    template<FunctionType ftype>
-    void setStateChangedListener(const std::function<void(DcpState)> stateChangedListener) {
-        this->stateChangedListener = std::move(stateChangedListener);
-        asynchronousCallback[DcpCallbackTypes::STATE_CHANGED] = ftype == ASYNC;
-    }
-
 protected:
 
     const SlaveDescription_t slaveDescription;
@@ -929,7 +558,7 @@ protected:
 
     uint32_t bufferSize = 900;
 
-
+#if defined(DEBUG) || defined(LOGGING)
     /*Logging*/
     std::map<logCategory_t, std::map<DcpLogLevel, bool>> logOnNotification;
     std::map<logCategory_t, std::map<DcpLogLevel, bool>> logOnRequest;
@@ -937,7 +566,7 @@ protected:
     std::map<logCategory_t, std::vector<Payload>> logBuffer;
 
     uint8_t *logRspBuffer = new uint8_t[bufferSize];
-
+#endif
     /*Data Handling*/
     std::map<valueReference_t, MultiDimValue *> values;
 
@@ -972,299 +601,18 @@ protected:
     std::map<valueReference_t, MultiDimValue *> updatedStructure;
 
 
-    /* Callbacks */
-    std::map<DcpCallbackTypes, bool> asynchronousCallback;
-    std::function<void()> configureCallback = []() {};
-    std::function<void()> prepareCallback = []() {};
-    std::function<void()> initializeCallback = []() {};
-    std::function<void()> synchronizeCallback = []() {};
-    std::function<void(uint64_t steps)> synchronizingStepCallback = [](uint64_t steps) {};
-    std::function<void(uint64_t steps)> synchronizedStepCallback = [](uint64_t steps) {};
-    std::function<void(uint64_t steps)> runningStepCallback = [](uint64_t steps) {};
-    std::function<void(uint64_t steps)> synchronizingNRTStepCallback = [](uint64_t steps) {};
-    std::function<void(uint64_t steps)> synchronizedNRTStepCallback = [](uint64_t steps) {};
-    std::function<void(uint64_t steps)> runningNRTStepCallback = [](uint64_t steps) {};
-
-    std::function<void(std::thread *runningRoutine)> stopCallback = [](std::thread *runningRoutine) {};
-
-    std::function<void(uint32_t nominator,
-                       uint32_t denominator)> timeResListener = [](uint32_t nominator,
-                                                                   uint32_t denominator) {};
-
-    std::function<void(uint16_t dataId, uint32_t steps)> stepsListener = [](uint16_t dataId, uint32_t steps) {};
-    std::function<void(uint8_t acuId, DcpOpMode opMode)> operationInformationListener = [](uint8_t acuId,
-                                                                                           DcpOpMode opMode) {};
-    std::function<void(DcpError error)> errorListener = [](DcpError error) {};
-    std::function<void()> configurationClearedListener = []() {};
-    std::function<void()> missingControlPduListener = []() {};
-    std::function<void(uint16_t dataId)> missingInputOutputPduListener = [](uint16_t dataId) {};
-    std::function<void(uint16_t dataId)> missingParameterPduListener = [](uint16_t paramId) {};
-    std::function<void(int64_t unixTimeStamp)> runtimeListener = [](int64_t unixTimeStamp) {};
-    std::function<void(DcpState state)> stateChangedListener = [](DcpState state) {};
+#if defined(DEBUG) || defined(LOGGING)
 
     uint8_t id = 162;
-    const LogTemplate HEARTBEAT_IGNORED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_INFORMATION,
-                                                      "In ADU-D Heartbeat is not defined, but canMonitorHeartBeat. Heartbeat will not be monitored.",
-                                                      {});
-    const LogTemplate HEARTBEAT_STARTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_INFORMATION,
-                                                      "Monitoring Heartbeat started.", {});
-    const LogTemplate HEARTBEAT_STOPPED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_INFORMATION,
-                                                      "Monitoring Heartbeat stopped.", {});
-    const LogTemplate HEARTBEAT_MISSED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_FATAL,
-                                                     "Heartbeat missed. Checked Time: %string. Last state request: %string.",
-                                                     {DcpDataType::string, DcpDataType::string});
-    const LogTemplate COMPUTING_STARTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                      "Computing routine started.", {});
-    const LogTemplate COMPUTING_FINISHED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                       "Computing routine finished.", {});
-    const LogTemplate COMPUTING_INTERRUPTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                          "Computing routine was interrupted. State was not changed.",
-                                                          {});
-    const LogTemplate STOPPING_STARTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                     "Stopping routine started.", {});
-    const LogTemplate STOPPING_FINISHED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                      "Stopping routine finished.", {});
-    const LogTemplate CONFIGURING_STARTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                        "Configuring routine started.", {});
-    const LogTemplate CONFIGURING_FINISHED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                         "Configuring routine finished.", {});
-    const LogTemplate CONFIGURING_INTERRUPTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                            "Configuring routine was interrupted. State was not changed.",
-                                                            {});
-    const LogTemplate PREPARING_STARTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                      "Preparing routine started.", {});
-    const LogTemplate PREPARING_FINISHED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                       "Preparing routine finished.", {});
-    const LogTemplate PREPARING_INTERRUPTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                          "Preparing routine was interrupted. State was not changed.",
-                                                          {});
-    const LogTemplate INITIALIZING_STARTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                         "Initializing routine started.", {});
-    const LogTemplate INITIALIZING_FINISHED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                          "Initializing routine finished.", {});
-    const LogTemplate INITIALIZING_INTERRUPTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                             "Initializing routine was interrupted. State was not changed.",
-                                                             {});
-    const LogTemplate SYNCHRONIZING_STARTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                          "Synchronizing routine started.", {});
-    const LogTemplate SYNCHRONIZING_FINISHED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                           "Synchronizing routine finished.", {});
-    const LogTemplate SYNCHRONIZING_INTERRUPTED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                              "Synchronizing routine was interrupted. State was not changed.",
-                                                              {});
-    const LogTemplate STATE_CHANGED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                  "DCP state has changed to %uint8", {DcpDataType::state});
-    const LogTemplate DATA_BUFFER_CREATED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                        "Buffer for data id %uint16 with buffer size %uint32 created.",
-                                                        {DcpDataType::uint16, DcpDataType::uint32});
-    const LogTemplate NEXT_SEQUENCE_ID_FROM_MASTER = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                 DcpLogLevel::LVL_DEBUG,
-                                                                 "Expected next pdu_seq_id from the master to be %uint16",
-                                                                 {DcpDataType::uint16});
-    const LogTemplate NEW_INPUT_CONFIG = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                     "Added input configuration for value reference %uint64 with source datatype %uint8 to data_id %uint16",
-                                                     {DcpDataType::uint64, DcpDataType::uint8, DcpDataType::uint16});
-    const LogTemplate NEW_OUTPUT_CONFIG = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                      "Added output configuration for value reference %uint64 to data_id %uint16",
-                                                      {DcpDataType::uint64, DcpDataType::uint16});
-    const LogTemplate NEW_TUNABLE_CONFIG = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                       "Added tunable parameter configuration for value reference %uint64 with source datatype %uint8 to data_id %uint16",
-                                                       {DcpDataType::uint64, DcpDataType::uint8, DcpDataType::uint16});
-    const LogTemplate STEP_SIZE_NOT_SET = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                      "Step size was not set for data id %uin16.",
-                                                      {DcpDataType::uint16});
-    const LogTemplate ASSIGNED_INPUT = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                   "Assigned input value for value reference %uint64 (%uint8 -> %uint8):",
-                                                   {DcpDataType::uint64, DcpDataType::uint8,
-                                                    DcpDataType::uint8});
-    const LogTemplate NOT_SUPPORTED_RSP_ACK = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                          "It is not supported to receive RSP_ack as slave.", {});
-    const LogTemplate NOT_SUPPORTED_RSP_NACK = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                           "It is not supported to receive RSP_nack as slave.", {});
-    const LogTemplate NOT_SUPPORTED_RSP_STATE_ACK = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                DcpLogLevel::LVL_ERROR,
-                                                                "It is not supported to receive RSP_state_ack as slave.",
-                                                                {});
-    const LogTemplate NOT_SUPPORTED_RSP_ERROR_ACK = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                DcpLogLevel::LVL_ERROR,
-                                                                "It is not supported to receive RSP_error_ack as slave.",
-                                                                {});
 
-    const LogTemplate NOT_SUPPORTED_LOG_ON_REQUEST = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                 DcpLogLevel::LVL_DEBUG,
-                                                                 "Log on request is not supported. ", {});
-    const LogTemplate NOT_SUPPORTED_LOG_ON_NOTIFICATION = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                      DcpLogLevel::LVL_DEBUG,
-                                                                      "Log on notification is not supported. ", {});
-
-
-    const LogTemplate INVALID_TYPE_ID = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                    "A PDU with invalid type id (%uint8) received. PDU will be dropped.",
-                                                    {DcpDataType::uint8});
-    const LogTemplate INVALID_RECEIVER = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                     "A PDU with invalid receiver (%uint8) received. PDU will be dropped.",
-                                                     {DcpDataType::uint8});
-    const LogTemplate UNKNOWN_DATA_ID = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                    "A PDU with unknown data_id (%uint16) received. PDU will be dropped.",
-                                                    {DcpDataType::uint16});
-    const LogTemplate UNKNOWN_PARAM_ID = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                     "A PDU with unknown param id (%uint16) received. PDU will be dropped.",
-                                                     {DcpDataType::uint16});
-    const LogTemplate CTRL_PDU_MISSED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                    "A CTRL PDU was missed.", {});
-    const LogTemplate IN_OUT_PDU_MISSED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                      "A Dat_input_output PDU was missed.", {});
-    const LogTemplate PARAM_PDU_MISSED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                     "A Dat_parameter PDU was missed.", {});
-    const LogTemplate OLD_CTRL_PDU_RECEIVED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                          "A old CTRL PDU was received. PDU will be dropped.", {});
-    const LogTemplate OLD_IN_OUT_PDU_RECEIVED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                            "A old Dat_input_output PDU was received. PDU will be dropped.",
-                                                            {});
-    const LogTemplate OLD_PARAM_PDU_RECEIVED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                           "An old Dat_parameter PDU was received. PDU will be dropped.",
-                                                           {});
-    const LogTemplate INVALID_LENGTH = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                   "A PDU with invalid length received. %uint16 (received) != %uint16 (expected).",
-                                                   {DcpDataType::uint16, DcpDataType::uint16});
-    const LogTemplate ONLY_NRT = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                             "The received PDU is only allowed in NRT. Current op mode is %uint8.",
-                                             {DcpDataType::uint8});
-    const LogTemplate MSG_NOT_ALLOWED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                    "It is not allowed to receive %uint8 in state %uint8.",
-                                                    {DcpDataType::uint8, DcpDataType::uint8});
-    const LogTemplate INVALID_UUID = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                 "UUID does not match %string (slave) != %string (received).",
-                                                 {DcpDataType::string, DcpDataType::string});
-    const LogTemplate INVALID_OP_MODE = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                    "Operation Mode %uint8 is not supported.", {DcpDataType::uint8});
-    const LogTemplate INVALID_MAJOR_VERSION = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                          "The requested major version (%uint8) is not supported by this slave (DCP %uint8.%uint8)",
-                                                          {DcpDataType::uint8, DcpDataType::uint8, DcpDataType::uint8});
-    const LogTemplate INVALID_MINOR_VERSION = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                          "The requested minor version (%uint8) is not supported by this slave (DCP %uint8.%uint8)",
-                                                          {DcpDataType::uint8, DcpDataType::uint8, DcpDataType::uint8});
-    const LogTemplate INCOMPLETE_CONFIGURATION_GAP_INPUT_POS = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                           DcpLogLevel::LVL_ERROR,
-                                                                           "State change to Configuring is not possible. CFG_config_input with position %string was not received for data id %uint16, but max. pos was %uint16.",
-                                                                           {DcpDataType::string, DcpDataType::uint16,
-                                                                            DcpDataType::uint16});
-    const LogTemplate INCOMPLETE_CONFIGURATION_GAP_OUTPUT_POS = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                            DcpLogLevel::LVL_ERROR,
-                                                                            "State change to Configuring is not possible. CFG_config_output with position %string was not received for data id %uint16, but max. pos was %uint16.",
-                                                                            {DcpDataType::string, DcpDataType::uint16,
-                                                                             DcpDataType::uint16});
-    const LogTemplate INCOMPLETE_CONFIGURATION_GAP_PARAM_POS = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                           DcpLogLevel::LVL_ERROR,
-                                                                           "State change to Configuring is not possible. CFG_config_tunable_parameter with position %string was not received for data id %uint16, but max. pos was %uint16.",
-                                                                           {DcpDataType::string, DcpDataType::uint16,
-                                                                            DcpDataType::uint16});
-    const LogTemplate INCOMPLETE_CONFIGURATION_STEPS = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                   DcpLogLevel::LVL_ERROR,
-                                                                   "State change to Configuring is not possible. Steps was not set for data id %uint16.",
-                                                                   {DcpDataType::uint16});
-    const LogTemplate INCOMPLETE_CONFIGURATION_TIME_RESOLUTION = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                             DcpLogLevel::LVL_ERROR,
-                                                                             "State change to Configuring is not possible. Time resolution was not set.",
-                                                                             {});
-    const LogTemplate INCOMPLETE_CONFIG_NW_INFO_INPUT = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                    DcpLogLevel::LVL_ERROR,
-                                                                    "State change to Configuring is not possible. CFG_source_network_information was not set for data id %uint16.",
-                                                                    {DcpDataType::uint16});
-    const LogTemplate INCOMPLETE_CONFIG_NW_INFO_OUTPUT = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                     DcpLogLevel::LVL_ERROR,
-                                                                     "State change to Configuring is not possible. CFG_target_network_information was not set for data id %uint16.",
-                                                                     {DcpDataType::uint16});
-    const LogTemplate INCOMPLETE_CONFIG_NW_INFO_TUNABLE = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                      DcpLogLevel::LVL_ERROR,
-                                                                      "State change to Configuring is not possible. CFG_pram_network_information was not set for data id %uint16.",
-                                                                      {DcpDataType::uint16});
-    const LogTemplate INCOMPLETE_CONFIG_SCOPE = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                            "State change to Configuring is not possible. CFG_scope was not set for data id %uint16.",
-                                                            {DcpDataType::uint16});
-
-    const LogTemplate DATA_NOT_ALLOWED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                     "It is not allowed to receive Data PDUs in state %uint8. PDU will be dropped.",
-                                                     {DcpDataType::uint8});
-
-    const LogTemplate START_TIME = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                               "Simulation starts at %string.", {DcpDataType::string});
-    const LogTemplate INVALID_START_TIME = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                       "Start time (%string) is before current time (%string)",
-                                                       {DcpDataType::string, DcpDataType::string});
-
-    const LogTemplate INVALID_STEPS = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                  "Step %uint32 is not supported. It is expected to be one of %string.",
-                                                  {DcpDataType::uint32, DcpDataType::string});
-    const LogTemplate NOT_SUPPORTED_VARIABLE_STEPS = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                 DcpLogLevel::LVL_ERROR,
-                                                                 "Variable steps are not supported. Current steps is %uint32. Last was %uint32.",
-                                                                 {DcpDataType::uint32, DcpDataType::uint32});
-    const LogTemplate INVALID_LOG_CATEGORY = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                         "Log category %uint8 is not known by the slave.",
-                                                         {DcpDataType::uint8});
-    const LogTemplate INVALID_LOG_LEVEL = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                      "%uint8 is not a valid log level.", {DcpDataType::uint8});
-    const LogTemplate INVALID_LOG_MODE = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                     "%uint8 is not a valid log mode.", {DcpDataType::uint8});
-
-    const LogTemplate INVALID_SCOPE = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                  "%uint8 is not a valid scope.", {DcpDataType::uint8});
-
-
-    const LogTemplate FIX_TIME_RESOLUTION = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                        "Setting time resolution not possible, it is fixed.", {});
-    const LogTemplate INVALID_TIME_RESOLUTION = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                            "Time resolution %uint32/%uint32 is not supported. It is expected to be %string.",
-                                                            {DcpDataType::uint32, DcpDataType::uint32,
-                                                             DcpDataType::string});
-    const LogTemplate INVALID_STEPS_OUTPUT = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                         "Step %uint32 is not supported by output with vr %uint64_t. It is expected to be one of %string.",
-                                                         {DcpDataType::uint32, DcpDataType::uint64,
-                                                          DcpDataType::string});
-    const LogTemplate INVALID_VALUE_REFERENCE_INPUT = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                  DcpLogLevel::LVL_ERROR,
-                                                                  "Value reference %uint64 is not part of the ACU or not a input.",
-                                                                  {DcpDataType::uint64});
-    const LogTemplate INVALID_VALUE_REFERENCE_OUTPUT = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                   DcpLogLevel::LVL_ERROR,
-                                                                   "Value reference %uint64 is not part of the ACU or not a output.",
-                                                                   {DcpDataType::uint64});
-    const LogTemplate INVALID_VALUE_REFERENCE_PARAMETER = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE,
-                                                                      DcpLogLevel::LVL_ERROR,
-                                                                      "Value reference %uint64 is not part of the ACU or not a parameter.",
-                                                                      {DcpDataType::uint64});
-    const LogTemplate INVALID_SOURCE_DATA_TYPE = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                             "A PDU with invalid source datatype received. %uint8 (recieved) is not compatible to %uint8 (slave).",
-                                                             {DcpDataType::uint8, DcpDataType::uint8});
-    const LogTemplate INVALID_PORT = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                 "Port %uint16 is not supported. It is expected to be %string.",
-                                                 {DcpDataType::uint16, DcpDataType::string});
-    const LogTemplate INVALID_TRANSPORT_PROTOCOL = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                               "No %uint8 interface STC_configure..",
-                                                               {DcpDataType::uint8});
-    const LogTemplate CONFIGURATION_CLEARED = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                          "Configuration cleared.", {});
-    const LogTemplate TIME_RES_SET = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                 "Time resolution was set to %uint32 / %uint32 s.",
-                                                 {DcpDataType::uint32, DcpDataType::uint32});
-    const LogTemplate STEP_SET = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                             "Steps for data_id %uint16 is set to %uint32.",
-                                             {DcpDataType::uint16, DcpDataType::uint32});
-    const LogTemplate DCP_ID_SET = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                               "DCP id is set to %uint8.", {DcpDataType::uint8});
-    const LogTemplate OP_MODE_SET = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                                "Operation mode is set to %uint8.", {DcpDataType::uint8});
-    const LogTemplate INVALID_STATE_ID = LogTemplate(id++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                     "State id (%uint8) in received state change PDU do not match current state (%uint8).",
-                                                     {DcpDataType::uint8, DcpDataType::uint8});
+#endif
 
 
     AbstractDcpManagerSlave(const SlaveDescription_t _slaveDescription) : slaveDescription(_slaveDescription) {
         this->errorCode = DcpError::NONE;
         this->state = DcpState::ALIVE;
         this->masterId = 0;
-        this->opMode = DcpOpMode::RT;
+        this->opMode = DcpOpMode::HRT;
 
         this->seqAtRegister = 0;
         this->numerator = 0;
@@ -1278,18 +626,18 @@ protected:
         stateChangePossible[DcpState::CONFIGURATION][DcpPduType::STC_prepare] = true;
         stateChangePossible[DcpState::CONFIGURATION][DcpPduType::INF_state] = true;
         stateChangePossible[DcpState::CONFIGURATION][DcpPduType::INF_log] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_set_steps] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_set_time_res] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_config_input] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_config_output] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_config_clear] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_set_target_network_information] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_set_source_network_information] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_config_tunable_parameter] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_set_parameter] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_set_param_network_information] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_set_logging] = true;
-        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_set_scope] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_steps] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_time_res] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_input] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_output] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_clear] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_target_network_information] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_source_network_information] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_tunable_parameter] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_parameter] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_param_network_information] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_logging] = true;
+        stateChangePossible[DcpState::CONFIGURATION][DcpPduType::CFG_scope] = true;
 
         stateChangePossible[DcpState::PREPARING][DcpPduType::STC_stop] = true;
         stateChangePossible[DcpState::PREPARING][DcpPduType::INF_state] = true;
@@ -1428,7 +776,7 @@ protected:
                         if (var.StructuralParameter.get()->Uint8.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint8.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1437,7 +785,7 @@ protected:
                         if (var.StructuralParameter.get()->Uint16.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint16.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1446,7 +794,7 @@ protected:
                         if (var.StructuralParameter.get()->Uint32.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint32.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1455,7 +803,7 @@ protected:
                         if (var.StructuralParameter.get()->Uint64.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint64.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1538,7 +886,7 @@ protected:
                         if (var.Input.get()->Int8.get()->start.get() != nullptr) {
                             auto &startValues = *var.Input.get()->Int8.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1547,7 +895,7 @@ protected:
                         if (var.Input.get()->Int16.get()->start.get() != nullptr) {
                             auto &startValues = *var.Input.get()->Int16.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1556,7 +904,7 @@ protected:
                         if (var.Input.get()->Int32.get()->start.get() != nullptr) {
                             auto &startValues = *var.Input.get()->Int32.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1565,7 +913,7 @@ protected:
                         if (var.Input.get()->Int64.get()->start.get() != nullptr) {
                             auto &startValues = *var.Input.get()->Int64.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1574,7 +922,7 @@ protected:
                         if (var.Input.get()->Uint8.get()->start.get() != nullptr) {
                             auto &startValues = *var.Input.get()->Uint8.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1583,7 +931,7 @@ protected:
                         if (var.Input.get()->Uint16.get()->start.get() != nullptr) {
                             auto &startValues = *var.Input.get()->Uint16.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1592,7 +940,7 @@ protected:
                         if (var.Input.get()->Uint32.get()->start.get() != nullptr) {
                             auto &startValues = *var.Input.get()->Uint32.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1601,7 +949,7 @@ protected:
                         if (var.Input.get()->Uint64.get()->start.get() != nullptr) {
                             auto &startValues = *var.Input.get()->Uint64.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1610,7 +958,7 @@ protected:
                         if (var.Input.get()->Float32.get()->start.get() != nullptr) {
                             auto &startValues = *var.Input.get()->Float32.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1619,7 +967,7 @@ protected:
                         if (var.Input.get()->Float64.get()->start.get() != nullptr) {
                             auto &startValues = *var.Input.get()->Float64.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1688,7 +1036,7 @@ protected:
                         if (var.Output.get()->Int8.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Int8.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1697,7 +1045,7 @@ protected:
                         if (var.Output.get()->Int16.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Int16.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1706,7 +1054,7 @@ protected:
                         if (var.Output.get()->Int32.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Int32.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1715,7 +1063,7 @@ protected:
                         if (var.Output.get()->Int64.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Int64.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1724,7 +1072,7 @@ protected:
                         if (var.Output.get()->Uint8.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint8.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
 
                         }
@@ -1734,7 +1082,7 @@ protected:
                         if (var.Output.get()->Uint16.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint16.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1743,7 +1091,7 @@ protected:
                         if (var.Output.get()->Uint32.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint32.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1752,7 +1100,7 @@ protected:
                         if (var.Output.get()->Uint64.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint64.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1761,7 +1109,7 @@ protected:
                         if (var.Output.get()->Float32.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Float32.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1770,7 +1118,7 @@ protected:
                         if (var.Output.get()->Float64.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Float64.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1839,7 +1187,7 @@ protected:
                         if (var.Parameter.get()->Int8.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Int8.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1848,7 +1196,7 @@ protected:
                         if (var.Parameter.get()->Int16.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Int16.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1857,7 +1205,7 @@ protected:
                         if (var.Parameter.get()->Int32.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Int32.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1866,7 +1214,7 @@ protected:
                         if (var.Parameter.get()->Int64.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Int64.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1875,7 +1223,7 @@ protected:
                         if (var.Parameter.get()->Uint8.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint8.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1884,7 +1232,7 @@ protected:
                         if (var.Parameter.get()->Uint16.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint16.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1893,7 +1241,7 @@ protected:
                         if (var.Parameter.get()->Uint32.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint32.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1902,7 +1250,7 @@ protected:
                         if (var.Parameter.get()->Uint64.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Uint64.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1911,7 +1259,7 @@ protected:
                         if (var.Parameter.get()->Float32.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Float32.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1920,7 +1268,7 @@ protected:
                         if (var.Parameter.get()->Float64.get()->start.get() != nullptr) {
                             auto &startValues = *var.Output.get()->Float64.get()->start;
                             for (int i = 0; i < startValues.size(); i++) {
-                                values[valueReference]->updateValue(i, startValues[i]);
+                                values[valueReference]->updateValue(i, dataType, startValues[i]);
                             }
                         }
                         break;
@@ -1953,12 +1301,7 @@ protected:
 #ifdef DEBUG
         Log(STATE_CHANGED, state);
 #endif
-        if (asynchronousCallback[DcpCallbackTypes::STATE_CHANGED]) {
-            std::thread t(stateChangedListener, state);
-            t.detach();
-        } else {
-            stateChangedListener(state);
-        }
+        notifyStateChangedListener();
     }
 
     void setTimeRes(uint32_t numerator,
@@ -1969,13 +1312,7 @@ protected:
         Log(TIME_RES_SET, numerator, denominator);
 #endif
         timeResolutionSet = true;
-
-        if (asynchronousCallback[DcpCallbackTypes::TIME_RES]) {
-            std::thread t(timeResListener, numerator, denominator);
-            t.detach();
-        } else {
-            timeResListener(numerator, denominator);
-        }
+        notifyTimeResListener();
     }
 
     void setSteps(uint16_t dataId, uint32_t steps) {
@@ -1983,71 +1320,28 @@ protected:
 #ifdef DEBUG
         Log(STEP_SET, dataId, steps);
 #endif
-        if (asynchronousCallback[DcpCallbackTypes::STEPS]) {
-            std::thread t(stepsListener, dataId, steps);
-            t.detach();
-        } else {
-            stepsListener(dataId, steps);
-        }
+        notifyStepsListener(dataId, steps);
     }
 
     void setOperationInformation(uint8_t dcpId, DcpOpMode opMode) {
         this->dcpId = dcpId;
-
+#if defined(DEBUG)
         Log(DCP_ID_SET, dcpId);
+#endif
         this->opMode = opMode;
+#if defined(DEBUG)
         Log(OP_MODE_SET, opMode);
-        if (asynchronousCallback[DcpCallbackTypes::OPERATION_INFORMATION]) {
-            std::thread t(operationInformationListener, dcpId, opMode);
-            t.detach();
-        } else {
-            operationInformationListener(dcpId, opMode);
-        }
-    }
-
-    void setRuntime(int64_t unixTimeStamp) {
-        if (asynchronousCallback[DcpCallbackTypes::RUNTIME]) {
-            std::thread t(runtimeListener, unixTimeStamp);
-            t.detach();
-        } else {
-            runtimeListener(unixTimeStamp);
-        }
-    }
-
-    void controlPduMissed() {
-        if (asynchronousCallback[DcpCallbackTypes::CONTROL_MISSED]) {
-            std::thread t(missingControlPduListener);
-            t.detach();
-        } else {
-            missingControlPduListener();
-        }
-    }
-
-    void inputOutputPduMissed(uint16_t dataId) {
-        if (asynchronousCallback[DcpCallbackTypes::IN_OUT_MISSED]) {
-            std::thread t(missingInputOutputPduListener, dataId);
-            t.detach();
-        } else {
-            missingInputOutputPduListener(dataId);
-        }
-    }
-
-    void parameterPduMissed(uint16_t paramId) {
-        if (asynchronousCallback[DcpCallbackTypes::CONTROL_MISSED]) {
-            std::thread t(missingParameterPduListener, paramId);
-            t.detach();
-        } else {
-            missingParameterPduListener(paramId);
-        }
+#endif
+        notifyOperationInformationListener();
     }
 
     void ack(uint16_t respSeqId) {
-        DcpPduAck ack = {dcpId, respSeqId};
+        DcpPduRspAck ack = {dcpId, respSeqId};
         driver.send(ack);
     }
 
     void nack(uint16_t respSeqId, DcpError errorCode) {
-        DcpPduNack nack = {DcpPduType::RSP_nack, dcpId, respSeqId, errorCode};
+        DcpPduRspNegative nack = {DcpPduType::RSP_nack, dcpId, respSeqId, errorCode};
         driver.send(nack);
     }
 
@@ -2163,7 +1457,7 @@ protected:
         if (error == DcpError::NONE) {
             //check logging
             switch (msg.getTypeId()) {
-                case DcpPduType::CFG_set_logging:
+                case DcpPduType::CFG_logging:
                 case DcpPduType::INF_log:
                     if (slaveDescription.Log == nullptr ||
                         (!slaveDescription.CapabilityFlags.canProvideLogOnNotification &&
@@ -2223,8 +1517,8 @@ protected:
                     }
                     break;
                 }
-                case DcpPduType::CFG_set_parameter: {
-                    DcpPduSetParameter setParameter = static_cast<DcpPduSetParameter &>(msg);
+                case DcpPduType::CFG_parameter: {
+                    DcpPduCfgParameter setParameter = static_cast<DcpPduCfgParameter &>(msg);
                     size_t correctLength = 0;
                     switch (setParameter.getSourceDataType()) {
                         case DcpDataType::binary:
@@ -2288,12 +1582,12 @@ protected:
 
             switch (msg.getTypeId()) {
                 case DcpPduType::STC_register: {
-                    DcpPduRegister registerPdu = static_cast<DcpPduRegister &>(msg);
+                    DcpPduStcRegister registerPdu = static_cast<DcpPduStcRegister &>(msg);
                     if (registerPdu.getStateId() != state) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_STATE_ID, registerPdu.getStateId(), state);
 #endif
-                        DcpPduNack nack = {DcpPduType::RSP_nack, registerPdu.getReceiver(), registerPdu.getPduSeqId(),
+                        DcpPduRspNegative nack = {DcpPduType::RSP_nack, registerPdu.getReceiver(), registerPdu.getPduSeqId(),
                                            DcpError::INVALID_STATE_ID};
                         driver.send(nack);
                         return false;
@@ -2309,7 +1603,7 @@ protected:
                 case DcpPduType::STC_send_outputs:
                 case DcpPduType::STC_stop:
                 case DcpPduType::STC_reset: {
-                    DcpPduBasicStateTransition &bst = static_cast<DcpPduBasicStateTransition &>(msg);
+                    DcpPduStc &bst = static_cast<DcpPduStc &>(msg);
                     if (bst.getStateId() != state) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_STATE_ID, bst.getStateId(), state);
@@ -2334,7 +1628,7 @@ protected:
         if (error == DcpError::NONE) {
             switch (msg.getTypeId()) {
                 case DcpPduType::STC_register: {
-                    DcpPduRegister registerPdu = static_cast<DcpPduRegister &>(msg);
+                    DcpPduStcRegister registerPdu = static_cast<DcpPduStcRegister &>(msg);
 
                     uint128_t uuidFromACUD = convertToUUID(slaveDescription.uuid);
                     uint128_t &uuidFromPDU = registerPdu.getSlaveUuid();
@@ -2364,12 +1658,12 @@ protected:
                     }
 
                     if (error == DcpError::NONE) {
-                        DcpPduAck ack = {registerPdu.getReceiver(), registerPdu.getPduSeqId()};
+                        DcpPduRspAck ack = {registerPdu.getReceiver(), registerPdu.getPduSeqId()};
                         driver.send(ack);
                         return true;
                     } else {
                         std::cout << registerPdu.getReceiver() << std::endl;
-                        DcpPduNack nack = {DcpPduType::RSP_nack, registerPdu.getReceiver(), registerPdu.getPduSeqId(),
+                        DcpPduRspNegative nack = {DcpPduType::RSP_nack, registerPdu.getReceiver(), registerPdu.getPduSeqId(),
                                            error};
                         driver.send(nack);
                         return false;
@@ -2521,7 +1815,7 @@ protected:
                     break;
                 }
                 case DcpPduType::STC_run: {
-                    DcpPduRun &runPDU = static_cast<DcpPduRun &>(msg);
+                    DcpPduStcRun &runPDU = static_cast<DcpPduStcRun &>(msg);
                     int64_t time_since_epoch = std::chrono::seconds(std::time(NULL)).count();
                     if (opMode != DcpOpMode::NRT
                         && (runPDU.getStartTime() > 0
@@ -2541,7 +1835,7 @@ protected:
                     break;
                 }
                 case DcpPduType::STC_do_step: {
-                    DcpPduDoStep &doStepPDU = static_cast<DcpPduDoStep &>(msg);
+                    DcpPduStcDoStep &doStepPDU = static_cast<DcpPduStcDoStep &>(msg);
                     if (!slavedescription::isStepsSupportedNRT(slaveDescription, doStepPDU.getSteps())) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_STEPS, doStepPDU.getSteps(),
@@ -2578,8 +1872,8 @@ protected:
                     }
                     break;
                 }
-                case DcpPduType::CFG_set_time_res: {
-                    DcpPduSetTimeRes &setTimeRes = static_cast<DcpPduSetTimeRes &>(msg);
+                case DcpPduType::CFG_time_res: {
+                    DcpPduCfgTimeRes &setTimeRes = static_cast<DcpPduCfgTimeRes &>(msg);
                     if (timeResolutionFix &&
                         !(numerator == setTimeRes.getNumerator() && denominator == setTimeRes.getDenominator())) {
 #if defined(DEBUG) || defined(LOGGING)
@@ -2589,7 +1883,7 @@ protected:
                     }
 
                     if (!slavedescription::isTimeResolutionSupported(slaveDescription, setTimeRes.getNumerator(),
-                                                   setTimeRes.getDenominator())) {
+                                                                     setTimeRes.getDenominator())) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_TIME_RESOLUTION, setTimeRes.getNumerator(), setTimeRes.getNumerator(),
                             slavedescription::supportedTimeResolutions(slaveDescription));
@@ -2600,8 +1894,8 @@ protected:
                     }
                     break;
                 }
-                case DcpPduType::CFG_set_steps: {
-                    DcpPduSetSteps &setSteps = static_cast<DcpPduSetSteps &>(msg);
+                case DcpPduType::CFG_steps: {
+                    DcpPduCfgSteps &setSteps = static_cast<DcpPduCfgSteps &>(msg);
                     uint16_t dataId = setSteps.getDataId();
 
                     if (outputAssignment.find(dataId) != outputAssignment.end()) {
@@ -2635,8 +1929,8 @@ protected:
 
                     break;
                 }
-                case DcpPduType::CFG_config_input: {
-                    DcpPduConfigInput &configInput = static_cast<DcpPduConfigInput &>(msg);
+                case DcpPduType::CFG_input: {
+                    DcpPduCfgInput &configInput = static_cast<DcpPduCfgInput &>(msg);
                     if (!slavedescription::inputExists(slaveDescription, configInput.getTargetVr())) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_VALUE_REFERENCE_INPUT, configInput.getTargetVr());
@@ -2647,8 +1941,9 @@ protected:
                     if (!castAllowed(slavedescription::getDataType(slaveDescription, configInput.getTargetVr()),
                                      configInput.getSourceDataType())) {
 #if defined(DEBUG) || defined(LOGGING)
-                        Log(INVALID_SOURCE_DATA_TYPE, configInput.getSourceDataType(), slavedescription::getDataType(slaveDescription,
-                                                                                                   configInput.getTargetVr()));
+                        Log(INVALID_SOURCE_DATA_TYPE, configInput.getSourceDataType(),
+                            slavedescription::getDataType(slaveDescription,
+                                                          configInput.getTargetVr()));
 #endif
                         if (error == DcpError::NONE) {
                             error = DcpError::INVALID_SOURCE_DATA_TYPE;
@@ -2657,8 +1952,8 @@ protected:
                     }
                     break;
                 }
-                case DcpPduType::CFG_config_output: {
-                    DcpPduConfigOutput &outputConfig = static_cast<DcpPduConfigOutput &>(msg);
+                case DcpPduType::CFG_output: {
+                    DcpPduCfgOutput &outputConfig = static_cast<DcpPduCfgOutput &>(msg);
                     if (!slavedescription::outputExists(slaveDescription, outputConfig.getSourceVr())) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_VALUE_REFERENCE_OUTPUT, outputConfig.getSourceVr());
@@ -2670,7 +1965,7 @@ protected:
                     if (steps.count(outputConfig.getDataId()) >= 1) {
 
                         if (!slavedescription::isStepsSupported(slaveDescription, output,
-                                              steps[outputConfig.getDataId()])) {
+                                                                steps[outputConfig.getDataId()])) {
 #if defined(DEBUG) || defined(LOGGING)
                             Log(INVALID_STEPS, steps[outputConfig.getDataId()],
                                 outputConfig.getSourceVr(), output.fixedSteps ?
@@ -2685,10 +1980,11 @@ protected:
                     }
                     break;
                 }
-                case DcpPduType::CFG_set_target_network_information: {
-                    DcpPduSetNetworkInformation &networkInfo = static_cast<DcpPduSetNetworkInformation &>(msg);
+                case DcpPduType::CFG_target_network_information: {
+                    DcpPduCfgNetworkInformation &networkInfo = static_cast<DcpPduCfgNetworkInformation &>(msg);
 
-                    if (!slavedescription::isTransportProtocolSupported(slaveDescription, networkInfo.getTransportProtocol())) {
+                    if (!slavedescription::isTransportProtocolSupported(slaveDescription,
+                                                                        networkInfo.getTransportProtocol())) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_TRANSPORT_PROTOCOL, networkInfo.getTransportProtocol());
 #endif
@@ -2697,10 +1993,11 @@ protected:
                     }
                     break;
                 }
-                case DcpPduType::CFG_set_source_network_information: {
-                    DcpPduSetNetworkInformation &networkInfo = static_cast<DcpPduSetNetworkInformation &>(msg);
+                case DcpPduType::CFG_source_network_information: {
+                    DcpPduCfgNetworkInformation &networkInfo = static_cast<DcpPduCfgNetworkInformation &>(msg);
 
-                    if (!slavedescription::isTransportProtocolSupported(slaveDescription, networkInfo.getTransportProtocol())) {
+                    if (!slavedescription::isTransportProtocolSupported(slaveDescription,
+                                                                        networkInfo.getTransportProtocol())) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_TRANSPORT_PROTOCOL, networkInfo.getTransportProtocol());
 #endif
@@ -2710,10 +2007,11 @@ protected:
 
                     switch (networkInfo.getTransportProtocol()) {
                         case DcpTransportProtocol::UDP_IPv4: {
-                            DcpPduSetNetworkInformationEthernet networkInfoUdp =
-                                    static_cast<DcpPduSetNetworkInformationEthernet &>(networkInfo);
+                            DcpPduCfgNetworkInformationIPv4 networkInfoUdp =
+                                    static_cast<DcpPduCfgNetworkInformationIPv4 &>(networkInfo);
 
-                            if (!slavedescription::isUDPPortSupportedForInputOutput(slaveDescription, networkInfoUdp.getPort())) {
+                            if (!slavedescription::isUDPPortSupportedForInputOutput(slaveDescription,
+                                                                                    networkInfoUdp.getPort())) {
 #if defined(DEBUG) || defined(LOGGING)
                                 Log(INVALID_PORT, networkInfoUdp.getPort(),
                                     slavedescription::supportedUdpPorts(slaveDescription));
@@ -2726,10 +2024,11 @@ protected:
                             break;
                         }
                         case DcpTransportProtocol::TCP_IPv4: {
-                            DcpPduSetNetworkInformationEthernet networkInfoTcp =
-                                    static_cast<DcpPduSetNetworkInformationEthernet &>(networkInfo);
+                            DcpPduCfgNetworkInformationIPv4 networkInfoTcp =
+                                    static_cast<DcpPduCfgNetworkInformationIPv4 &>(networkInfo);
 
-                            if (!slavedescription::isTCPPortSupportedForInputOutput(slaveDescription, networkInfoTcp.getPort())) {
+                            if (!slavedescription::isTCPPortSupportedForInputOutput(slaveDescription,
+                                                                                    networkInfoTcp.getPort())) {
 #if defined(DEBUG) || defined(LOGGING)
                                 Log(INVALID_PORT, networkInfoTcp.getPort(),
                                     slavedescription::supportedTCPPorts(slaveDescription));
@@ -2743,8 +2042,8 @@ protected:
                     }
                     break;
                 }
-                case DcpPduType::CFG_set_parameter: {
-                    DcpPduSetParameter &setParameter = static_cast<DcpPduSetParameter &>(msg);
+                case DcpPduType::CFG_parameter: {
+                    DcpPduCfgParameter &setParameter = static_cast<DcpPduCfgParameter &>(msg);
                     if (!slavedescription::parameterExists(slaveDescription, setParameter.getParameterVr())) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_VALUE_REFERENCE_PARAMETER, setParameter.getParameterVr());
@@ -2764,8 +2063,8 @@ protected:
                     }
                     break;
                 }
-                case DcpPduType::CFG_config_tunable_parameter: {
-                    DcpPduConfigTunableParameter configTunableParameter = static_cast<DcpPduConfigTunableParameter &>(msg);
+                case DcpPduType::CFG_tunable_parameter: {
+                    DcpPduCfgTunableParameter configTunableParameter = static_cast<DcpPduCfgTunableParameter &>(msg);
 
                     if (!slavedescription::parameterExists(slaveDescription, configTunableParameter.getParameterVr())) {
 #if defined(DEBUG) || defined(LOGGING)
@@ -2774,8 +2073,9 @@ protected:
                         error = DcpError::INVALID_VALUE_REFERENCE;
                         break;
                     }
-                    if (!castAllowed(slavedescription::getDataType(slaveDescription, configTunableParameter.getParameterVr()),
-                                     configTunableParameter.getSourceDataType())) {
+                    if (!castAllowed(
+                            slavedescription::getDataType(slaveDescription, configTunableParameter.getParameterVr()),
+                            configTunableParameter.getSourceDataType())) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_SOURCE_DATA_TYPE, configTunableParameter.getSourceDataType(),
                             slavedescription::getDataType(slaveDescription, configTunableParameter.getParameterVr()));
@@ -2786,11 +2086,11 @@ protected:
                     }
                     break;
                 }
-                case DcpPduType::CFG_set_param_network_information: {
-                    DcpPduSetParamNetworkInformation &paramNetworkInfo = static_cast<DcpPduSetParamNetworkInformation &>(msg);
+                case DcpPduType::CFG_param_network_information: {
+                    DcpPduCfgParamNetworkInformation &paramNetworkInfo = static_cast<DcpPduCfgParamNetworkInformation &>(msg);
 
                     if (!slavedescription::isTransportProtocolSupported(slaveDescription,
-                                                      paramNetworkInfo.getTransportProtocol())) {
+                                                                        paramNetworkInfo.getTransportProtocol())) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_TRANSPORT_PROTOCOL, paramNetworkInfo.getTransportProtocol());
 #endif
@@ -2799,10 +2099,10 @@ protected:
 
                     switch (paramNetworkInfo.getTransportProtocol()) {
                         case DcpTransportProtocol::UDP_IPv4: {
-                            DcpPduSetParamNetworkInformationEthernet paramNetworkInfoUDP =
-                                    static_cast<DcpPduSetParamNetworkInformationEthernet &>(paramNetworkInfo);
+                            DcpPduCfgParamNetworkInformationIPv4 paramNetworkInfoUDP =
+                                    static_cast<DcpPduCfgParamNetworkInformationIPv4 &>(paramNetworkInfo);
                             if (!slavedescription::isUDPPortSupportedForParameter(slaveDescription,
-                                                                paramNetworkInfoUDP.getPort())) {
+                                                                                  paramNetworkInfoUDP.getPort())) {
 #if defined(DEBUG) || defined(LOGGING)
                                 Log(INVALID_PORT, paramNetworkInfoUDP.getPort(),
                                     slavedescription::supportedUdpPortsParameter(slaveDescription));
@@ -2817,10 +2117,10 @@ protected:
                             break;
                         }
                         case DcpTransportProtocol::TCP_IPv4: {
-                            DcpPduSetParamNetworkInformationEthernet paramNetworkInfTCP =
-                                    static_cast<DcpPduSetParamNetworkInformationEthernet &>(paramNetworkInfo);
+                            DcpPduCfgParamNetworkInformationIPv4 paramNetworkInfTCP =
+                                    static_cast<DcpPduCfgParamNetworkInformationIPv4 &>(paramNetworkInfo);
                             if (!slavedescription::isTCPPortSupportedForParameter(slaveDescription,
-                                                                paramNetworkInfTCP.getPort())) {
+                                                                                  paramNetworkInfTCP.getPort())) {
 #if defined(DEBUG) || defined(LOGGING)
                                 Log(INVALID_PORT, paramNetworkInfTCP.getPort(),
                                     slavedescription::supportedTCPPortsParameter(slaveDescription));
@@ -2837,9 +2137,9 @@ protected:
                     }
                     break;
                 }
-                case DcpPduType::CFG_set_logging: {
+                case DcpPduType::CFG_logging: {
 
-                    DcpPduSetLogging &setLogging = static_cast<DcpPduSetLogging &>(msg);
+                    DcpPduCfgLogging &setLogging = static_cast<DcpPduCfgLogging &>(msg);
                     if (setLogging.getLogMode() == DcpLogMode::LOG_ON_REQUEST &&
                         !slaveDescription.CapabilityFlags.canProvideLogOnRequest) {
 #if defined(DEBUG) || defined(LOGGING)
@@ -2892,8 +2192,8 @@ protected:
                     }
                     break;
                 }
-                case DcpPduType::CFG_set_scope: {
-                    DcpPduSetScope &setScope = static_cast<DcpPduSetScope &>(msg);
+                case DcpPduType::CFG_scope: {
+                    DcpPduCfgScope &setScope = static_cast<DcpPduCfgScope &>(msg);
                     if ((uint8_t) setScope.getScope() > 2) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_SCOPE, setScope.getScope());
@@ -2914,6 +2214,38 @@ protected:
             nack(basic.getPduSeqId(), error);
         }
         return false;
+    }
+
+
+#define ALLOWED_INPUT_OUTPUT(input, b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11) \
+case DcpDataType::input: \
+    switch(output){ \
+    case DcpDataType::uint8: \
+        return b0;\
+    case DcpDataType::uint16:\
+        return b1;\
+    case DcpDataType::uint32:\
+        return b2;\
+    case DcpDataType::uint64:\
+        return b3;\
+    case DcpDataType::int8:\
+        return b4;\
+    case DcpDataType::int16:\
+        return b5;\
+    case DcpDataType::int32:\
+        return b6;\
+    case DcpDataType::int64:\
+        return b7;\
+    case DcpDataType::float32:\
+        return b8;\
+    case DcpDataType::float64:\
+        return b9;\
+    case DcpDataType::string:\
+        return b10;\
+    case DcpDataType::binary:\
+        return b11;\
+    default: \
+        return false;\
     }
 
     bool castAllowed(DcpDataType input, DcpDataType output) {
@@ -2948,32 +2280,12 @@ protected:
         return false;
     }
 
-    virtual void prepare() = 0;
-
-    virtual void configure() = 0;
-
-    virtual void initialize() = 0;
-
-    virtual void synchronize() = 0;
-
-    virtual void run(const int64_t startTime) = 0;
-
-    virtual void doStep(const uint32_t steps) = 0;
-
-    virtual void startHeartbeat() = 0;
-
-    virtual void updateLastStateRequest() = 0;
-
-
     void clearOutputBuffer() {
         for (auto const &ent : outputBuffer) {
             delete ent.second;
         }
         outputBuffer.clear();
     }
-
-    virtual void sendOutputs(std::vector<uint16_t> dataIdsToSend) = 0;
-
 
     void clearConfig() {
         driver.stop();
@@ -3018,7 +2330,9 @@ protected:
                 break;
             }
         }
+#if defined(DEBUG)
         Log(CONFIGURATION_CLEARED);
+#endif
     }
 
     void updateStructualDependencies(uint64_t valueReference, size_t value) {
@@ -3028,12 +2342,13 @@ protected:
             std::vector<size_t> newDimensions(values[vrToUpdate]->getDimensions());
             newDimensions[pos] = value;
             if (slavedescription::inputExists(slaveDescription, valueReference) ||
-                    slavedescription::outputExists(slaveDescription, valueReference)) {
+                slavedescription::outputExists(slaveDescription, valueReference)) {
                 values[vrToUpdate] = new MultiDimValue(slavedescription::getDataType(slaveDescription, vrToUpdate),
                                                        values[vrToUpdate]->getBaseSize(), newDimensions);
             } else {
-                updatedStructure[vrToUpdate] = new MultiDimValue(slavedescription::getDataType(slaveDescription, vrToUpdate),
-                                                                 values[vrToUpdate]->getBaseSize(), newDimensions);
+                updatedStructure[vrToUpdate] = new MultiDimValue(
+                        slavedescription::getDataType(slaveDescription, vrToUpdate),
+                        values[vrToUpdate]->getBaseSize(), newDimensions);
             }
         }
     }
@@ -3046,19 +2361,7 @@ protected:
         }
     }
 
-    virtual void computingFinished() = 0;
-
-    virtual void stoppingFinished() = 0;
-
-    virtual void preparingFinished() = 0;
-
-    virtual void configuringFinished() = 0;
-
-    virtual void realtimeStepFinished() = 0;
-
-    virtual void initializingFinished() = 0;
-
-    virtual void synchronizingFinished() = 0;
+#if defined(DEBUG) || defined(LOGGING)
 
     virtual void consume(const LogTemplate &logTemplate, uint8_t *payload, size_t size) override {
         LogEntry logEntry(logTemplate, payload, size);
@@ -3079,8 +2382,44 @@ protected:
         } else {
             delete[] payload;
         }
-
     }
+
+#endif
+
+    virtual void notifyStateChangedListener() = 0;
+
+    virtual void notifyTimeResListener() = 0;
+
+    virtual void notifyStepsListener(uint16_t dataId, uint32_t steps) = 0;
+
+    virtual void notifyOperationInformationListener() = 0;
+
+    virtual void notifyRuntimeListener(int64_t unixTimeStamp) = 0;
+
+    virtual void notifyMissingControlPduListener() = 0;
+
+    virtual void notifyMissingInputOutputPduListener(uint16_t dataId) = 0;
+
+    virtual void notifyMissingParameterPduListener(uint16_t paramId) = 0;
+
+    virtual void prepare() = 0;
+
+    virtual void configure() = 0;
+
+    virtual void initialize() = 0;
+
+    virtual void synchronize() = 0;
+
+    virtual void run(const int64_t startTime) = 0;
+
+    virtual void doStep(const uint32_t steps) = 0;
+
+    virtual void startHeartbeat() = 0;
+
+    virtual void updateLastStateRequest() = 0;
+
+    virtual void sendOutputs(std::vector<uint16_t> dataIdsToSend) = 0;
+
 };
 
 #endif /* ACI_LOGIC_DRIVERMANAGERSLAVE_H_ */

@@ -6,8 +6,7 @@
 #define DCPLIB_LOGMANAGER_H
 
 #include <cstdint>
-#include <dcp/log/LogTemplate.hpp>
-#include <dcp/model/LogEntry.hpp>
+#include <dcp/model/LogTemplate.hpp>
 #include <functional>
 
 

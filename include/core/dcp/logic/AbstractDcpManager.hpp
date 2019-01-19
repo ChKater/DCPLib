@@ -9,12 +9,14 @@
 #define ACI_DRIVER_ABSTRACTACIDRIVERMANAGER_H_
 
 #include <cstdint>
-#include <iostream>
 #include <map>
 
-#include "dcp/logic/DcpManager.hpp"
-#include "dcp/driver/DcpDriver.hpp"
-#include "dcp/logic/Logable.hpp"
+#include <dcp/logic/DcpManager.hpp>
+#include <dcp/driver/DcpDriver.hpp>
+#if defined(DEBUG) || defined(LOGGING)
+#include <dcp/logic/Logable.hpp>
+#include <dcp/helper/LogHelper.hpp>
+#endif
 
 
 /**
@@ -22,7 +24,11 @@
  *
  * @author Christian Kater
  */
-class AbstractDcpManager : public Logable {
+class AbstractDcpManager
+#if defined(DEBUG) || defined(LOGGING)
+    : public Logable
+#endif
+        {
 public:
 
     ~AbstractDcpManager() {}
@@ -36,7 +42,9 @@ public:
     void start() {
 
         driver.setDcpManager(getDcpManager());
+#if defined(DEBUG) || defined(LOGGING)
         driver.setLogManager(logManager);
+#endif
         driver.startReceiving();
     }
 
@@ -97,9 +105,11 @@ protected:
 
 protected:
     AbstractDcpManager() {
+#if defined(DEBUG) || defined(LOGGING)
         setLogManager({[this](const LogTemplate &logTemplate, uint8_t *payload, size_t size) {
             consume(logTemplate, payload, size);
         }, [this](size_t size) { return alloc(size); }});
+#endif
     }
 
     /**

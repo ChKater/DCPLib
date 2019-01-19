@@ -11,13 +11,40 @@
 #include <cstdint>
 #include <condition_variable>
 
-#include "dcp/model/DcpPdu.hpp"
-#include "dcp/model/DcpConstants.hpp"
+#include <dcp/model/pdu/DcpPdu.hpp>
+#include <dcp/model/pdu/DcpPduBasic.hpp>
+#include <dcp/model/pdu/DcpPduCfgInput.hpp>
+#include <dcp/model/pdu/DcpPduCfgLogging.hpp>
+#include <dcp/model/pdu/DcpPduCfgNetworkInformation.hpp>
+#include <dcp/model/pdu/DcpPduCfgOutput.hpp>
+#include <dcp/model/pdu/DcpPduCfgParameter.hpp>
+#include <dcp/model/pdu/DcpPduCfgParamNetworkInformation.hpp>
+#include <dcp/model/pdu/DcpPduCfgScope.hpp>
+#include <dcp/model/pdu/DcpPduCfgSteps.hpp>
+#include <dcp/model/pdu/DcpPduCfgTimeRes.hpp>
+#include <dcp/model/pdu/DcpPduCfgTunableParameter.hpp>
+#include <dcp/model/pdu/DcpPduDatInputOutput.hpp>
+#include <dcp/model/pdu/DcpPduDatParameter.hpp>
+#include <dcp/model/pdu/DcpPduInfLog.hpp>
+#include <dcp/model/pdu/DcpPduNtfLog.hpp>
+#include <dcp/model/pdu/DcpPduNtfStateChanged.hpp>
+#include <dcp/model/pdu/DcpPduRspAck.hpp>
+#include <dcp/model/pdu/DcpPduRspLogAck.hpp>
+#include <dcp/model/pdu/DcpPduRspNegative.hpp>
+#include <dcp/model/pdu/DcpPduRspStateAck.hpp>
+#include <dcp/model/pdu/DcpPduStc.hpp>
+#include <dcp/model/pdu/DcpPduStcDoStep.hpp>
+#include <dcp/model/pdu/DcpPduStcRegister.hpp>
+#include <dcp/model/pdu/DcpPduStcRun.hpp>
+#include <dcp/model/DcpCallbackTypes.hpp>
+
 #include "dcp/logic/AbstractDcpManager.hpp"
 #include "dcp/model/LogEntry.hpp"
 
 #include "dcp/model/DcpTypes.hpp"
 #include "dcp/xml/DcpSlaveDescriptionElements.hpp"
+
+#include <dcp/helper/Helper.hpp>
 
 #include <thread>
 #include <iostream>
@@ -46,7 +73,7 @@ public:
     virtual void receive(DcpPdu &msg) override {
         switch (msg.getTypeId()) {
             case DcpPduType::RSP_ack: {
-                DcpPduAck &ack = static_cast<DcpPduAck &>(msg);
+                DcpPduRspAck &ack = static_cast<DcpPduRspAck &>(msg);
                 if (synchronousCallback[DcpCallbackTypes::ACK]) {
                     ackReceivedListener(ack.getSender(), ack.getRespSeqId());
                 } else {
@@ -56,7 +83,7 @@ public:
                 break;
             }
             case DcpPduType::RSP_nack: {
-                DcpPduNack &nack = static_cast<DcpPduNack &>(msg);
+                DcpPduRspNegative &nack = static_cast<DcpPduRspNegative &>(msg);
                 if (synchronousCallback[DcpCallbackTypes::NACK]) {
                     nAckReceivedListener(nack.getSender(), nack.getRespSeqId(),
                                          nack.getErrorCode());
@@ -68,7 +95,7 @@ public:
                 break;
             }
             case DcpPduType::RSP_state_ack: {
-                DcpPduStateAck &stateAck = static_cast<DcpPduStateAck &>(msg);
+                DcpPduRspStateAck &stateAck = static_cast<DcpPduRspStateAck &>(msg);
                 if (synchronousCallback[DcpCallbackTypes::NACK]) {
                     stateAckReceivedListener(stateAck.getSender(),
                                              stateAck.getRespSeqId(), stateAck.getStateId());
@@ -80,8 +107,8 @@ public:
                 break;
             }
             case DcpPduType::RSP_error_ack: {
-                DcpPduNack &errorAck = static_cast<DcpPduNack &>(msg);
-                DcpPduStateAck &stateAck = static_cast<DcpPduStateAck &>(msg);
+                DcpPduRspNegative &errorAck = static_cast<DcpPduRspNegative &>(msg);
+                DcpPduRspStateAck &stateAck = static_cast<DcpPduRspStateAck &>(msg);
                 if (synchronousCallback[DcpCallbackTypes::NACK]) {
                     errorAckReceivedListener(errorAck.getSender(),
                                              errorAck.getRespSeqId(), errorAck.getErrorCode());
@@ -93,7 +120,7 @@ public:
                 break;
             }
             case DcpPduType::RSP_log_ack: {
-                DcpPduLogAck &logAck = static_cast<DcpPduLogAck &>(msg);
+                DcpPduRspLogAck &logAck = static_cast<DcpPduRspLogAck &>(msg);
                 if (logTemplates.count(logAck.getSender()) > 0) {
 
                     std::vector<std::shared_ptr<LogEntry>> entries;
@@ -202,7 +229,7 @@ public:
    */
     void STC_register(const uint8_t dcpId, const DcpState stateId, const uint128_t slaveUuid,
                       const DcpOpMode opMode, const uint8_t majorversion, const uint8_t minorVersion) {
-        DcpPduRegister pdu = {getNextSeqNum(dcpId), dcpId, stateId, slaveUuid, opMode, majorversion, minorVersion};
+        DcpPduStcRegister pdu = {getNextSeqNum(dcpId), dcpId, stateId, slaveUuid, opMode, majorversion, minorVersion};
         driver.send(pdu);
     }
 
@@ -214,7 +241,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void STC_deregister(const uint8_t dcpId, const DcpState stateId) {
-        DcpPduBasicStateTransition pdu = {DcpPduType::STC_deregister, getNextSeqNum(
+        DcpPduStc pdu = {DcpPduType::STC_deregister, getNextSeqNum(
                 dcpId), dcpId, stateId};
         driver.send(pdu);
     }
@@ -227,7 +254,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void STC_prepare(const uint8_t dcpId, const DcpState stateId) {
-        DcpPduBasicStateTransition pdu = {DcpPduType::STC_prepare, getNextSeqNum(
+        DcpPduStc pdu = {DcpPduType::STC_prepare, getNextSeqNum(
                 dcpId), dcpId, stateId};
         driver.send(pdu);
     }
@@ -240,7 +267,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void STC_configure(const uint8_t dcpId, const DcpState stateId) {
-        DcpPduBasicStateTransition pdu = {DcpPduType::STC_configure, getNextSeqNum(
+        DcpPduStc pdu = {DcpPduType::STC_configure, getNextSeqNum(
                 dcpId), dcpId, stateId};
         driver.send(pdu);
     }
@@ -253,7 +280,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void STC_initialize(const uint8_t dcpId, const DcpState stateId) {
-        DcpPduBasicStateTransition pdu = {DcpPduType::STC_initialize, getNextSeqNum(
+        DcpPduStc pdu = {DcpPduType::STC_initialize, getNextSeqNum(
                 dcpId), dcpId, stateId};
         driver.send(pdu);
     }
@@ -267,7 +294,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void STC_run(const uint8_t dcpId, const DcpState stateId, const int64_t startTime) {
-        DcpPduRun pdu = {getNextSeqNum(dcpId),
+        DcpPduStcRun pdu = {getNextSeqNum(dcpId),
                          dcpId, stateId, startTime};
         driver.send(pdu);
     }
@@ -281,7 +308,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void STC_do_step(const uint8_t dcpId, const DcpState stateId, const uint32_t steps) {
-        DcpPduDoStep pdu = {getNextSeqNum(dcpId),
+        DcpPduStcDoStep pdu = {getNextSeqNum(dcpId),
                             dcpId, stateId, steps};
         driver.send(pdu);
     }
@@ -294,7 +321,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void STC_send_outputs(const uint8_t dcpId, const DcpState stateId) {
-        DcpPduBasicStateTransition pdu = {DcpPduType::STC_send_outputs, getNextSeqNum(
+        DcpPduStc pdu = {DcpPduType::STC_send_outputs, getNextSeqNum(
                 dcpId), dcpId, stateId};
         driver.send(pdu);
     }
@@ -307,7 +334,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void STC_stop(const uint8_t dcpId, const DcpState stateId) {
-        DcpPduBasicStateTransition pdu = {DcpPduType::STC_stop, getNextSeqNum(dcpId),
+        DcpPduStc pdu = {DcpPduType::STC_stop, getNextSeqNum(dcpId),
                                           dcpId, stateId};
         driver.send(pdu);
     }
@@ -320,7 +347,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void STC_reset(const uint8_t dcpId, const DcpState stateId) {
-        DcpPduBasicStateTransition pdu = {DcpPduType::STC_reset, getNextSeqNum(dcpId),
+        DcpPduStc pdu = {DcpPduType::STC_reset, getNextSeqNum(dcpId),
                                           dcpId, stateId};
         driver.send(pdu);
     }
@@ -374,7 +401,7 @@ public:
     */
     void CFG_time_res(const uint8_t dcpId, const uint32_t numerator,
                           const uint32_t denominator) {
-        DcpPduSetTimeRes pdu = {getNextSeqNum(dcpId), dcpId,
+        DcpPduCfgTimeRes pdu = {getNextSeqNum(dcpId), dcpId,
                                 numerator, denominator};
         driver.send(pdu);
     }
@@ -389,7 +416,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void CFG_steps(const uint8_t dcpId, uint16_t dataId, const uint32_t steps) {
-        DcpPduSetSteps pdu = {getNextSeqNum(dcpId), dcpId, steps, dataId};
+        DcpPduCfgSteps pdu = {getNextSeqNum(dcpId), dcpId, steps, dataId};
         driver.send(pdu);
     }
 
@@ -407,7 +434,7 @@ public:
     void CFG_input(const uint8_t dcpId,
                           const uint16_t dataId, uint16_t pos, const uint64_t targetVr,
                           const DcpDataType sourceDataType) {
-        DcpPduConfigInput pdu = {getNextSeqNum(dcpId), dcpId, dataId, pos, targetVr, sourceDataType};
+        DcpPduCfgInput pdu = {getNextSeqNum(dcpId), dcpId, dataId, pos, targetVr, sourceDataType};
         driver.send(pdu);
     }
 
@@ -422,7 +449,7 @@ public:
      */
     void CFG_output(const uint8_t dcpId, const uint16_t dataId,
                            const uint16_t pos, const uint64_t sourceVr) {
-        DcpPduConfigOutput pdu = {getNextSeqNum(dcpId), dcpId, dataId, pos, sourceVr};
+        DcpPduCfgOutput pdu = {getNextSeqNum(dcpId), dcpId, dataId, pos, sourceVr};
         driver.send(pdu);
     }
 
@@ -433,7 +460,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void CFG_clear(const uint8_t dcpId) {
-        DcpPduBasic pdu = {DcpPduType::CFG_config_clear, getNextSeqNum(dcpId),
+        DcpPduBasic pdu = {DcpPduType::CFG_clear, getNextSeqNum(dcpId),
                            dcpId};
         driver.send(pdu);
     }
@@ -451,7 +478,7 @@ public:
     void CFG_target_network_information_UDP(const uint8_t dcpId,
                                                 const uint16_t dataId, const uint32_t ipAddress,
                                                 const uint16_t port) {
-        DcpPduSetNetworkInformationEthernet pdu = {DcpPduType::CFG_set_target_network_information, getNextSeqNum(dcpId),
+        DcpPduCfgNetworkInformationIPv4 pdu = {DcpPduType::CFG_target_network_information, getNextSeqNum(dcpId),
                                                    dcpId, dataId, port, ipAddress,  DcpTransportProtocol::UDP_IPv4};
         driver.send(pdu);
     }
@@ -469,7 +496,7 @@ public:
     void CFG_target_network_information_TCP(const uint8_t dcpId,
                                             const uint16_t dataId, const uint32_t ipAddress,
                                             const uint16_t port) {
-        DcpPduSetNetworkInformationEthernet pdu = {DcpPduType::CFG_set_target_network_information, getNextSeqNum(dcpId),
+        DcpPduCfgNetworkInformationIPv4 pdu = {DcpPduType::CFG_target_network_information, getNextSeqNum(dcpId),
                                                    dcpId, dataId, port, ipAddress,  DcpTransportProtocol::TCP_IPv4};
         driver.send(pdu);
     }
@@ -486,7 +513,7 @@ public:
     void CFG_source_network_information_UDP(const uint8_t dcpId,
                                                 const uint16_t dataId, const uint32_t ipAddress,
                                                 const uint16_t port) {
-        DcpPduSetNetworkInformationEthernet pdu = {DcpPduType::CFG_set_source_network_information, getNextSeqNum(dcpId),
+        DcpPduCfgNetworkInformationIPv4 pdu = {DcpPduType::CFG_source_network_information, getNextSeqNum(dcpId),
                                                    dcpId, dataId, port, ipAddress, DcpTransportProtocol::UDP_IPv4};
         driver.send(pdu);
     }
@@ -503,7 +530,7 @@ public:
     void CFG_source_network_information_TCP(const uint8_t dcpId,
                                             const uint16_t dataId, const uint32_t ipAddress,
                                             const uint16_t port) {
-        DcpPduSetNetworkInformationEthernet pdu = {DcpPduType::CFG_set_source_network_information, getNextSeqNum(dcpId),
+        DcpPduCfgNetworkInformationIPv4 pdu = {DcpPduType::CFG_source_network_information, getNextSeqNum(dcpId),
                                                    dcpId, dataId, port, ipAddress, DcpTransportProtocol::TCP_IPv4};
         driver.send(pdu);
     }
@@ -520,7 +547,7 @@ public:
      */
     void CFG_parameter(const uint8_t dcpId, const uint64_t parameterVr, const DcpDataType sourceDataType,
                            uint8_t *configuration, size_t configurationLength) {
-        DcpPduSetParameter setParameter = {getNextSeqNum(dcpId), dcpId, parameterVr, sourceDataType, configuration,
+        DcpPduCfgParameter setParameter = {getNextSeqNum(dcpId), dcpId, parameterVr, sourceDataType, configuration,
                                            configurationLength};
         driver.send(setParameter);
     }
@@ -538,7 +565,7 @@ public:
     void CFG_tunable_parameter(const uint8_t dcpId,
                                       const uint16_t paramId, uint16_t pos, const uint64_t parameterVr,
                                       const DcpDataType sourceDataType) {
-        DcpPduConfigTunableParameter configTunableParameter = {getNextSeqNum(dcpId), dcpId, paramId, pos, parameterVr,
+        DcpPduCfgTunableParameter configTunableParameter = {getNextSeqNum(dcpId), dcpId, paramId, pos, parameterVr,
                                                                sourceDataType};
         driver.send(configTunableParameter);
     }
@@ -555,7 +582,7 @@ public:
     void CFG_param_network_information_UDP(const uint8_t dcpId,
                                                const uint16_t paramId, const uint32_t ipAddress,
                                                const uint16_t port) {
-        DcpPduSetParamNetworkInformationEthernet aciPduSetParamNetworkInformationUdp = {getNextSeqNum(dcpId), dcpId, paramId,
+        DcpPduCfgParamNetworkInformationIPv4 aciPduSetParamNetworkInformationUdp = {getNextSeqNum(dcpId), dcpId, paramId,
                                                                                    port, ipAddress, DcpTransportProtocol::UDP_IPv4};
         driver.send(aciPduSetParamNetworkInformationUdp);
     }
@@ -572,7 +599,7 @@ public:
     void CFG_param_network_information_TCP(const uint8_t dcpId,
                                            const uint16_t paramId, const uint32_t ipAddress,
                                            const uint16_t port) {
-        DcpPduSetParamNetworkInformationEthernet aciPduSetParamNetworkInformationUdp = {getNextSeqNum(dcpId), dcpId, paramId,
+        DcpPduCfgParamNetworkInformationIPv4 aciPduSetParamNetworkInformationUdp = {getNextSeqNum(dcpId), dcpId, paramId,
                                                                                         port, ipAddress, DcpTransportProtocol::TCP_IPv4};
         driver.send(aciPduSetParamNetworkInformationUdp);
     }
@@ -588,7 +615,7 @@ public:
      */
     void CFG_logging(const uint8_t dcpId, const uint8_t logCategory, const DcpLogLevel logLevel,
                          const DcpLogMode logMode) {
-        DcpPduSetLogging setLogging = {getNextSeqNum(dcpId), dcpId, logCategory, logLevel, logMode};
+        DcpPduCfgLogging setLogging = {getNextSeqNum(dcpId), dcpId, logCategory, logLevel, logMode};
         driver.send(setLogging);
     }
 
@@ -602,7 +629,7 @@ public:
      * @pre setSlaveNetworkInformation of the given DcpDriver was called for dcpId before
      */
     void CFG_scope(const uint8_t dcpId, const uint16_t dataId, const DcpScope scope) {
-        DcpPduSetScope setScope = {getNextSeqNum(dcpId), dcpId, dataId, scope};
+        DcpPduCfgScope setScope = {getNextSeqNum(dcpId), dcpId, dataId, scope};
         driver.send(setScope);
     }
 

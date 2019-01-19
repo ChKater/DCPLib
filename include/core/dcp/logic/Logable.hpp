@@ -5,9 +5,11 @@
 #ifndef DCPLIB_LOGABLE_H
 #define DCPLIB_LOGABLE_H
 
-#include "dcp/helper/Helper.hpp"
-#include "dcp/model/LogEntry.hpp"
-#include "dcp/log/LogManager.hpp"
+#include <dcp/helper/LogHelper.hpp>
+#include <dcp/helper/Helper.hpp>
+#include <dcp/model/LogEntry.hpp>
+#include <dcp/logic/LogManager.hpp>
+
 
 
 class Logable {

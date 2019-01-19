@@ -6,7 +6,6 @@
 #define ACOSAR_ACIBINARY_H
 
 #include <cstdint>
-#include <iostream>
 
 class DcpBinary{
 public:

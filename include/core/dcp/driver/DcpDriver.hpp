@@ -5,10 +5,9 @@
 #ifndef DCPLIB_DCPDRIVER_H
 #define DCPLIB_DCPDRIVER_H
 
-#include <dcp/log/LogManager.hpp>
-#include "dcp/model/DcpConstants.hpp"
-#include "dcp/model/DcpPdu.hpp"
-#include "dcp/logic/DcpManager.hpp"
+#include <dcp/logic/LogManager.hpp>
+#include <dcp/model/pdu/DcpPdu.hpp>
+#include <dcp/logic/DcpManager.hpp>
 
 
 /**

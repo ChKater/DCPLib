@@ -5,7 +5,7 @@
 #ifndef DCPLIB_FILTEREDOSTREAMLOG_H
 #define DCPLIB_FILTEREDOSTREAMLOG_H
 
-#include "OstreamLog.hpp"
+#include <dcp/log/OstreamLog.hpp>
 
 class FilteredOstreamLog : public OstreamLog {
 public:

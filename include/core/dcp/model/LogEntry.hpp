@@ -6,12 +6,12 @@
 #define ACOSAR_DCPLOGENTRY_H
 
 #include <cstdint>
-#include "dcp/model/DcpConstants.hpp"
 #include <regex>
-#include <iostream>
 #include <string>
 #include <sstream>
-#include "dcp/log/LogTemplate.hpp"
+#include <dcp/model/LogTemplate.hpp>
+#include <dcp/model/DcpTypes.hpp>
+#include <dcp/model/constant/DcpState.hpp>
 
 class LogEntry {
 public:
@@ -125,9 +125,6 @@ public:
 
             std::string typeStr = "%" + to_string(type);
             const size_t pos = msg.find(typeStr);
-            if (pos > msg.length()) {
-                std::cout << (int) logTemplate.id << std::endl;
-            }
             msg.replace(pos, typeStr.length(), value);
 
         }

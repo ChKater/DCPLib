@@ -6,7 +6,6 @@
 #define ACOSAR_DCPTYPES_H
 
 #include <cstdint>
-#include <iostream>
 #include <cstring>
 
 //Define types

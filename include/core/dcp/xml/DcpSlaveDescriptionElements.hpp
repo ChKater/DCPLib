@@ -6,11 +6,10 @@
 #define ACOSAR_DCPSLAVEDESCRIPTIONELEMENTS_H
 
 #include <dcp/model/DcpTypes.hpp>
-#include <dcp/model/DcpConstants.hpp>
 #include <memory>
 #include <vector>
-
-
+#include <string>
+#include <iomanip>
 
 struct HardRealTime_t {
     bool set;

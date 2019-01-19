@@ -5,7 +5,6 @@
 #ifndef DCPLIB_TCPHELPER_H
 #define DCPLIB_TCPHELPER_H
 
-#include <dcp/model/DcpConstants.hpp>
 #include <dcp/driver/DcpDriver.hpp>
 #include <dcp/logic/Logable.hpp>
 #include <dcp/driver/ethernet/ErrorCodes.hpp>

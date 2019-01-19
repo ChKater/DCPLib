@@ -6,9 +6,9 @@
 #define LIBACOSAR_ACIDESCRIPTIONREADER_H
 
 #include <dcp/xml/DcpSlaveDescriptionElements.hpp>
-#include <dcp/model/DcpConstants.hpp>
+#include <dcp/model/constant/DcpOpMode.hpp>
+#include <dcp/model/constant/DcpTransportProtocol.hpp>
 #include <dcp/helper/Helper.hpp>
-#include <iostream>
 
 namespace slavedescription {
 
@@ -282,7 +282,7 @@ namespace slavedescription {
 
 
     inline const bool isOpModeSupported(const SlaveDescription_t &slaveDescription, const DcpOpMode opMode) {
-        if (slaveDescription.OpMode.HardRealTime.set && opMode == DcpOpMode::RT) {
+        if (slaveDescription.OpMode.HardRealTime.set && opMode == DcpOpMode::HRT) {
             return true;
         } else if (slaveDescription.OpMode.SoftRealTime.set && opMode == DcpOpMode::SRT) {
             return true;
@@ -297,9 +297,9 @@ namespace slavedescription {
         switch (transportProtocol) {
             case DcpTransportProtocol::UDP_IPv4:
                 return slaveDescription.TransportProtocols.UDP_IPv4.get() != nullptr;
-            case DcpTransportProtocol::BLUETOOTH:
+            case DcpTransportProtocol::rfcomm_Bluetooth:
                 return slaveDescription.TransportProtocols.Bluetooth.get() != nullptr;
-            case DcpTransportProtocol::CAN:
+            case DcpTransportProtocol::CAN_BASED:
                 return slaveDescription.TransportProtocols.CAN;
             case DcpTransportProtocol::USB:
                 return slaveDescription.TransportProtocols.USB.get() != nullptr;

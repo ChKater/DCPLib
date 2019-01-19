@@ -10,7 +10,9 @@
 #include <vector>
 #include <map>
 #include <string>
-#include "dcp/model/DcpConstants.hpp"
+#include <dcp/model/constant/DcpLogLevel.hpp>
+#include <dcp/model/constant/DcpDataType.hpp>
+
 
 enum LogCategory : uint8_t {
     DCP_LIB_ETHERNET = 240,

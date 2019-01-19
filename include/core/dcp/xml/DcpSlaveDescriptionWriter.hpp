@@ -5,7 +5,6 @@
 #ifndef DCPLIB_DCPSLAVEDESCRIPTIONWRITER_HPP
 #define DCPLIB_DCPSLAVEDESCRIPTIONWRITER_HPP
 
-#include <dcp/model/DcpConstants.hpp>
 #include <dcp/model/DcpTypes.hpp>
 #include <dcp/xml/DcpSlaveDescriptionElements.hpp>
 
@@ -20,6 +19,7 @@
 #include <xercesc/framework/MemBufInputSource.hpp>
 
 #include <iostream>
+#include <sstream>
 #include <fstream>
 
 template<typename T>

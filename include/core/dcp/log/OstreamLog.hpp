@@ -8,8 +8,8 @@
 #include <iostream>
 #include <string>
 #include <regex>
-#include "dcp/helper/Helper.hpp"
-#include "dcp/model/LogEntry.hpp"
+#include <dcp/helper/Helper.hpp>
+#include <dcp/model/LogEntry.hpp>
 
 #include <iostream>
 

@@ -4,8 +4,8 @@
 #include <asio.hpp>
 #include <dcp/logic/Logable.hpp>
 #include <dcp/driver/ethernet/ErrorCodes.hpp>
-#include <dcp/model/DcpConstants.hpp>
 #include <dcp/logic/DcpManager.hpp>
+#include <dcp/model/pdu/DcpPduFactory.hpp>
 
 namespace Udp {
     static std::string protocolName = "UDP_IPv4";
