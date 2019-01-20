@@ -11,42 +11,42 @@
 #include <string>
 #include <iomanip>
 
-struct HardRealTime_t {
-    bool set;
-};
+struct HardRealTime_t {};
 
-static HardRealTime_t make_HardRealTime() {
-    return {false};
+static std::shared_ptr<HardRealTime_t> make_HardRealTime_ptr() {
+    return std::make_shared<HardRealTime_t>();
 }
 
-struct SoftRealTime_t {
-    bool set;
-};
+struct SoftRealTime_t {};
 
-static SoftRealTime_t make_SoftRealTime() {
-    return {false};
+static std::shared_ptr<SoftRealTime_t> make_SoftRealTime_ptr() {
+    return std::make_shared<SoftRealTime_t>();
 }
 
 struct NonRealTime_t {
-    bool set;
     steps_t defaultSteps;
     bool fixedSteps;
     steps_t minSteps;
     steps_t maxSteps;
 };
 
-static NonRealTime_t make_NonRealTime() {
-    return {false, 1, true, 1, 1};
+static std::shared_ptr<NonRealTime_t> make_NonRealTime_ptr() {
+    std::shared_ptr<NonRealTime_t> ptr = std::make_shared<NonRealTime_t>();
+    ptr->defaultSteps = 1;
+    ptr->fixedSteps = true;
+    ptr->minSteps = 1;
+    ptr->maxSteps = 1;
+    return ptr;
 }
 
 struct OpMode_t {
-    HardRealTime_t HardRealTime;
-    SoftRealTime_t SoftRealTime;
-    NonRealTime_t NonRealTime;
+    std::shared_ptr<HardRealTime_t> HardRealTime;
+    std::shared_ptr<SoftRealTime_t> SoftRealTime;
+    std::shared_ptr<NonRealTime_t> NonRealTime;
 };
 
 static OpMode_t make_OpMode() {
-    return {make_HardRealTime(), make_SoftRealTime(), make_NonRealTime()};
+    return {nullptr, nullptr, nullptr};
 }
 
 
@@ -414,46 +414,47 @@ static Dimension_t make_Dimension(DimensionType type, uint64_t value){
     return {type, value};
 }
 
-enum class DependenciesKind {
+enum class DependencyKind {
     DEPENDENT, LINEAR
 };
 
-static std::string to_string(DependenciesKind kind){
+static std::string to_string(DependencyKind kind){
     switch(kind){
-        case DependenciesKind::DEPENDENT:
+        case DependencyKind::DEPENDENT:
             return "dependent";
-        case DependenciesKind::LINEAR:
+        case DependencyKind::LINEAR:
             return "linear";
     }
 }
 
 struct Dependency_t {
     valueReference_t vr;
-    DependenciesKind dependenciesKind;
+    DependencyKind dependencyKind;
 };
 
-static Dependency_t make_Dependency(valueReference_t vr, DependenciesKind dependenciesKind){
-    return {vr, dependenciesKind};
+static Dependency_t make_Dependency(valueReference_t vr, DependencyKind dependencyKind){
+    return {vr, dependencyKind};
 }
 
 struct DependencyState_t {
-    bool none;
     std::vector<Dependency_t> dependecies;
 };
 
-static DependencyState_t make_DependecyState(){
-    return {false, std::vector<Dependency_t>()};
+static std::shared_ptr<DependencyState_t> make_DependecyState_ptr(){
+    std::shared_ptr<DependencyState_t> ptr = std::make_shared<DependencyState_t>();
+    ptr->dependecies = std::vector<Dependency_t>();
+    return ptr;
 }
 
 struct Dependencies_t {
-    DependencyState_t Initialization;
-    DependencyState_t Run;
+    std::shared_ptr<DependencyState_t> Initialization;
+    std::shared_ptr<DependencyState_t> Run;
 };
 
 static std::shared_ptr<Dependencies_t> make_Dependencies_ptr(){
     std::shared_ptr<Dependencies_t> ptr = std::make_shared<Dependencies_t>();
-    ptr->Initialization = make_DependecyState();
-    ptr->Run = make_DependecyState();
+    ptr->Initialization = nullptr;
+    ptr->Run = nullptr;
     return ptr;
 }
 

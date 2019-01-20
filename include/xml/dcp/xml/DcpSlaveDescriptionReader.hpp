@@ -192,8 +192,8 @@ private:
 
 void AciDescriptionReaderErrorHandler::reportParseException(const xercesc::SAXParseException &ex) {
     char *message = xercesc::XMLString::transcode(ex.getMessage());
-    std::cout << message << " at line " << ex.getLineNumber() << " column " << ex.getColumnNumber() << std::endl;
-
+    throw std::invalid_argument(std::string(message) + " at line " + std::to_string(ex.getLineNumber()) +
+                                " column " + std::to_string(ex.getColumnNumber()));
     xercesc::XMLString::release(&message);
 }
 
@@ -227,8 +227,8 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
         return nullptr;
     }
 
-    XercesDOMParser *parser = new XercesDOMParser();
-    xercesc::ErrorHandler *handler = new AciDescriptionReaderErrorHandler();
+    std::unique_ptr<XercesDOMParser> parser(new XercesDOMParser());
+    std::unique_ptr<xercesc::ErrorHandler> handler(new AciDescriptionReaderErrorHandler());
 
     parser->setExternalNoNamespaceSchemaLocation("slaveDescription.xsd");
     parser->setExitOnFirstFatalError(true);
@@ -236,87 +236,54 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
     parser->setValidationScheme(XercesDOMParser::Val_Auto);
     parser->setDoNamespaces(true);
     parser->setDoSchema(true);
-    parser->setErrorHandler(handler);
+    parser->setErrorHandler(handler.get());
     parser->useCachedGrammarInParse(true);
     parser->setHandleMultipleImports(true);
     parser->setLoadSchema(false);
     parser->setValidationSchemaFullChecking(false);
     xercesc::MemBufInputSource dcpAnnotationFile(reinterpret_cast<const XMLByte *>(xsd::dcpAnnotation.c_str()),
                                                  xsd::dcpAnnotation.size(), "dcpAnnotation.xsd");
-    if (!parser->loadGrammar(dcpAnnotationFile, Grammar::SchemaGrammarType, true)) {
-        std::cerr << "error: unable to load dcpAnnotationFile" << std::endl;
-        return nullptr;
-    }
+    assert(parser->loadGrammar(dcpAnnotationFile, Grammar::SchemaGrammarType, true));
     xercesc::MemBufInputSource dcpAttributeGroupsFile(
             reinterpret_cast<const XMLByte *>(xsd::dcpAttributeGroups.c_str()), xsd::dcpAttributeGroups.size(),
             "dcpAttributeGroups.xsd");
-    if (!parser->loadGrammar(dcpAttributeGroupsFile, Grammar::SchemaGrammarType, true)) {
-        std::cerr << "error: unable to load dcpAttributeGroupsFile" << std::endl;
-        return nullptr;
-    }
+    assert(parser->loadGrammar(dcpAttributeGroupsFile, Grammar::SchemaGrammarType, true));
     xercesc::MemBufInputSource dcpDataTypesFile(
             reinterpret_cast<const XMLByte *>(xsd::dcpDataTypes.c_str()), xsd::dcpDataTypes.size(),
             "dcpDataTypes.xsd");
-    if (!parser->loadGrammar(dcpDataTypesFile, Grammar::SchemaGrammarType, true)) {
-        std::cerr << "error: unable to load dcpDataTypes" << std::endl;
-        return nullptr;
-    }
+    assert(parser->loadGrammar(dcpDataTypesFile, Grammar::SchemaGrammarType, true));
     xercesc::MemBufInputSource dcpTransportProtocolFile(
             reinterpret_cast<const XMLByte *>(xsd::dcpTransportProtocol.c_str()), xsd::dcpTransportProtocol.size(),
             "dcpTransportProtocolTypes.xsd");
-    if (!parser->loadGrammar(dcpTransportProtocolFile, Grammar::SchemaGrammarType, true)) {
-        std::cerr << "error: unable to load dcpTransportProtocolTypes" << std::endl;
-        return nullptr;
-    }
+    assert(parser->loadGrammar(dcpTransportProtocolFile, Grammar::SchemaGrammarType, true));
     xercesc::MemBufInputSource dcpTypeFile(
             reinterpret_cast<const XMLByte *>(xsd::dcpType.c_str()), xsd::dcpType.size(),
             "dcpType.xsd");
-    if (!parser->loadGrammar(dcpTypeFile, Grammar::SchemaGrammarType, true)) {
-        std::cerr << "error: unable to load dcpType" << std::endl;
-        return nullptr;
-    }
+    assert(parser->loadGrammar(dcpTypeFile, Grammar::SchemaGrammarType, true));
     xercesc::MemBufInputSource dcpUnitFile(
             reinterpret_cast<const XMLByte *>(xsd::dcpUnit.c_str()), xsd::dcpUnit.size(),
             "dcpUnit.xsd");
-    if (!parser->loadGrammar(dcpUnitFile, Grammar::SchemaGrammarType, true)) {
-        std::cerr << "error: unable to load dcpUnit" << std::endl;
-        return nullptr;
-    }
+    assert(parser->loadGrammar(dcpUnitFile, Grammar::SchemaGrammarType, true));
     xercesc::MemBufInputSource dcpVariableFile(
             reinterpret_cast<const XMLByte *>(xsd::dcpVariable.c_str()), xsd::dcpVariable.size(),
             "dcpVariable.xsd");
-    if (!parser->loadGrammar(dcpVariableFile, Grammar::SchemaGrammarType, true)) {
-        std::cerr << "error: unable to load dcpVariable" << std::endl;
-        return nullptr;
-    }
+    assert(parser->loadGrammar(dcpVariableFile, Grammar::SchemaGrammarType, true));
     xercesc::MemBufInputSource slaveDescriptionFile(
             reinterpret_cast<const XMLByte *>(xsd::slaveDescription.c_str()), xsd::slaveDescription.size(),
             "slaveDescription.xsd");
-    if (!parser->loadGrammar(slaveDescriptionFile, Grammar::SchemaGrammarType, true)) {
-        std::cerr << "error: unable to load slaveDescription" << std::endl;
-        return nullptr;
-    }
+    assert(parser->loadGrammar(slaveDescriptionFile, Grammar::SchemaGrammarType, true));
 
     try {
         parser->parse(XMLString::transcode(acuDFile));
     } catch (const xercesc::XMLException &toCatch) {
         char *message = xercesc::XMLString::transcode(toCatch.getMessage());
-        std::cout << "Exception message is: " << message << std::endl;;
-        xercesc::XMLString::release(&message);
-        return nullptr;
-    }
-
-
-    if (parser->getErrorCount() != 0) {
-        std::cerr << "Invalid XML vs. XSD: found " << parser->getErrorCount() << " errors!" << std::endl;
-        return nullptr;
+        throw std::invalid_argument(message);
     }
 
     DOMNode *slaveDescriptionNode;
     DOMDocument *doc;
     doc = parser->getDocument();
     slaveDescriptionNode = doc->getDocumentElement();
-
 
 
     /*****************************
@@ -354,30 +321,33 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
     PARSE_NODE(slaveDescriptionNode, OpMode)
     {
         PARSE_NODE(OpModeNode, HardRealTime)
-        PARSE_AND_ASSIGN_BOOL(HardRealTime, slaveDescription->OpMode.HardRealTime, set)
+        if(HardRealTimeNode != nullptr){
+            slaveDescription->OpMode.HardRealTime = make_HardRealTime_ptr();
+        }
     }
     {
         PARSE_NODE(OpModeNode, SoftRealTime)
-        PARSE_AND_ASSIGN_BOOL(SoftRealTime, slaveDescription->OpMode.SoftRealTime, set)
+        if(SoftRealTimeNode != nullptr){
+            slaveDescription->OpMode.SoftRealTime = make_SoftRealTime_ptr();
+        }
     }
     {
         PARSE_NODE(OpModeNode, NonRealTime)
-        PARSE_AND_ASSIGN_BOOL(NonRealTime, slaveDescription->OpMode.NonRealTime, set)
-        PARSE_AND_ASSIGN_INT(NonRealTime, slaveDescription->OpMode.NonRealTime, defaultSteps, uint32_t)
-        PARSE_AND_ASSIGN_BOOL(NonRealTime, slaveDescription->OpMode.NonRealTime, fixedSteps)
-        PARSE_AND_ASSIGN_INT(NonRealTime, slaveDescription->OpMode.NonRealTime, minSteps, uint32_t)
-        PARSE_AND_ASSIGN_INT(NonRealTime, slaveDescription->OpMode.NonRealTime, maxSteps, uint32_t)
+        if(NonRealTimeNode != nullptr){
+            slaveDescription->OpMode.NonRealTime = make_NonRealTime_ptr();
+            PARSE_AND_ASSIGN_INT_PTR(NonRealTime, slaveDescription->OpMode.NonRealTime, defaultSteps, uint32_t)
+            PARSE_AND_ASSIGN_BOOL_PTR(NonRealTime, slaveDescription->OpMode.NonRealTime, fixedSteps)
+            PARSE_AND_ASSIGN_INT_PTR(NonRealTime, slaveDescription->OpMode.NonRealTime, minSteps, uint32_t)
+            PARSE_AND_ASSIGN_INT_PTR(NonRealTime, slaveDescription->OpMode.NonRealTime, maxSteps, uint32_t)
+        }
+
     }
 
-    // <xs:assert test="(./HardRealTime/@set eq true()) or (./SoftRealTime/@set eq true())
-    //                   or (./NonRealTime/@set eq true())"/>
-    if (!(slaveDescription->OpMode.HardRealTime.set || slaveDescription->OpMode.SoftRealTime.set ||
-          slaveDescription->OpMode.NonRealTime.set)) {
-        std::cerr
-                << "Assert \"(./HardRealTime/@set eq true()) or (./SoftRealTime/@set eq true()) or "
-                << "(./NonRealTime/@set eq true())\" violated"
-                << std::endl;
-        return nullptr;
+    // <xs:assert test="(count(./HardRealTime) eq 1) or (count(./SoftRealTime) eq 1) or (count(./NonRealTime) eq 1)"/>
+    if (!(slaveDescription->OpMode.HardRealTime != nullptr || slaveDescription->OpMode.SoftRealTime != nullptr ||
+          slaveDescription->OpMode.NonRealTime != nullptr)) {
+        throw std::invalid_argument("Assert \"(count(./HardRealTime) eq 1) or (count(./SoftRealTime) eq 1) or "
+                                    "(count(./NonRealTime) eq 1)\" violated");
     }
 
     /*****************************
@@ -547,11 +517,9 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
     }
     if (!((countResolutionFixed == 1 && countResolutionRange == 0 && countResolution == 1) ||
           (countResolutionNotFixed == countResolution))) {
-        std::cerr
-                << "Assert \"((count(./Resolution[@fixed = true()]) eq 1) and (count(./ResolutionRange) eq 0) and"
-                << "(count(./Resolution) eq 1)) or (count(./Resolution[@fixed eq false()]) eq count(./Resolution))\" violated"
-                << std::endl;
-        return nullptr;
+        throw std::invalid_argument("Assert \"((count(./Resolution[@fixed = true()]) eq 1) and "
+                                    "(count(./ResolutionRange) eq 0) and (count(./Resolution) eq 1)) or "
+                                    "(count(./Resolution[@fixed eq false()]) eq count(./Resolution))\" violated");
     }
 
     /*****************************
@@ -673,12 +641,12 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
     // ((./CapabilityFlags/@canMonitorHeartbeat eq false()) and boolean(./Heartbeat) eq false())"/>
     if (!((slaveDescription->CapabilityFlags.canMonitorHeartbeat && slaveDescription->Heartbeat != nullptr) ||
           (!slaveDescription->CapabilityFlags.canMonitorHeartbeat && slaveDescription->Heartbeat == nullptr))) {
-        std::cerr
-                << "Assert \"((./CapabilityFlags/@canMonitorHeartbeat eq true()) and boolean(./Heartbeat)) or "
-                << "((./CapabilityFlags/@canMonitorHeartbeat eq false()) and boolean(./Heartbeat) eq false())\" violated"
-                << std::endl;
-        return nullptr;
+        throw std::invalid_argument("Assert \"((./CapabilityFlags/@canMonitorHeartbeat eq true()) and "
+                                    "boolean(./Heartbeat)) or  ((./CapabilityFlags/@canMonitorHeartbeat eq false()) "
+                                    "and boolean(./Heartbeat) eq false())\" violated");
     }
+
+
 
     /*****************************
     * Variables
@@ -807,11 +775,9 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                                                     // or (not(@constant) and @linkedVR))"/>
                                                     if (!((constant != nullptr && linkedVr == nullptr)
                                                           || (constant == nullptr && linkedVr != nullptr))) {
-                                                        std::cerr
-                                                                << "Assert \"((@constant and not(@linkedVR)) "
-                                                                << "or (not(@constant) and @linkedVR))\" violated"
-                                                                << std::endl;
-                                                        return nullptr;
+                                                        throw std::invalid_argument("Assert \"((@constant and "
+                                                                                    "not(@linkedVR))  or (not(@constant) "
+                                                                                    "and @linkedVR))\" violated");
                                                     }
                                                     if (constant != nullptr) {
                                                         causality->dimensions.push_back(
@@ -946,11 +912,8 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                                                     // or (not(@constant) and @linkedVR))"/>
                                                     if (!((constant != nullptr && linkedVr == nullptr)
                                                           || (constant == nullptr && linkedVr != nullptr))) {
-                                                        std::cerr
-                                                                << "Assert \"((@constant and not(@linkedVR)) "
-                                                                << "or (not(@constant) and @linkedVR))\" violated"
-                                                                << std::endl;
-                                                        return nullptr;
+                                                        throw std::invalid_argument("Assert \"((@constant and not(@linkedVR)) "
+                                                                                    "or (not(@constant) and @linkedVR))\" violated");
                                                     }
                                                     if (constant != nullptr) {
                                                         output->dimensions.push_back(
@@ -970,25 +933,28 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                                                 PARSE_NODE_NAME(state)
                                                 if (stateNodeName == "Initialization" ||
                                                     stateNodeName == "Run") {
-                                                    DependencyState_t* depState =  &output->Dependencies->Initialization;
+                                                    std::shared_ptr<DependencyState_t> depState;
                                                     if (stateNodeName == "Run") {
-                                                        depState =  &output->Dependencies->Run;
+                                                        output->Dependencies->Run = make_DependecyState_ptr();
+                                                        depState =  output->Dependencies->Run;
+                                                    } else if(stateNodeName == "Initialization"){
+                                                        output->Dependencies->Initialization = make_DependecyState_ptr();
+                                                        depState =  output->Dependencies->Initialization;
                                                     }
-                                                    PARSE_AND_ASSIGN_BOOL_PTR(state, depState, none)
                                                     DEFINE_LOOP_HEAD(stateNode, Dependency) {
                                                         DEFINE_NODE_ITEM(Dependency)
                                                         if (IS_ELEMENT(Dependency)) {
                                                             PARSE_NODE_NAME(Dependency)
                                                             if (DependencyNodeName == "Dependency") {
                                                                 PARSE_ATTR_INT(Dependency, vr, uint64_t)
-                                                                PARSE_ATTR_STRING(Dependency, dependenciesKind);
+                                                                PARSE_ATTR_STRING(Dependency, dependencyKind);
                                                                 depState->dependecies.push_back(make_Dependency(*vr,
-                                                                                                               *dependenciesKind ==
+                                                                                                               *dependencyKind ==
                                                                                                                "dependent"
                                                                                                                ?
-                                                                                                               DependenciesKind::DEPENDENT
+                                                                                                               DependencyKind::DEPENDENT
                                                                                                                :
-                                                                                                               DependenciesKind::LINEAR));
+                                                                                                               DependencyKind::LINEAR));
                                                             }
                                                         }
                                                     }
@@ -1012,25 +978,20 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                             // <xs:assert test="(@initialization eq true()) and
                             //      (./Dependencies/Run/@none eq true()) or (@initialization eq false)"/>
                             if (!((output->initialization &&
-                                   output->Dependencies != nullptr &&
-                                   output->Dependencies->Run.none)
+                                   output->Dependencies != nullptr && output->Dependencies->Run == nullptr)
                                   || !output->initialization)) {
-                                std::cerr
-                                        << "Assert \"(@initialization eq true()) and "
-                                        << "(./Dependencies/Run/@none eq true()) or (@initialization eq false)\" violated"
-                                        << std::endl;
-                                return nullptr;
+                                throw std::invalid_argument("Assert \"(@initialization eq true()) and "
+                                                            "(./Dependencies/Run/@none eq true()) or "
+                                                            "(@initialization eq false)\" violated");
                             }
                             // test="(@fixedSteps eq true() and @defaultSteps >= 1 and not(@minSteps) and not(@maxSteps))
                             // or (@fixedSteps eq false() and @minSteps and @maxSteps and (@maxSteps > @minSteps))"
                             if (!(((*fixedSteps && *defaultSteps >= 1 && minSteps == nullptr && maxSteps == nullptr) ||
                                    (!*fixedSteps && minSteps != nullptr && maxSteps != nullptr && *maxSteps > *minSteps)
                             ))) {
-                                std::cerr
-                                        << "Assert \"(@fixedSteps eq true() and @defaultSteps >= 1 and not(@minSteps) and not(@maxSteps))"
-                                        << "or (@fixedSteps eq false() and @minSteps and @maxSteps and (@maxSteps > @minSteps))\" violated"
-                                        << std::endl;
-                                return nullptr;
+                                throw std::invalid_argument("Assert \"(@fixedSteps eq true() and @defaultSteps >= 1 and "
+                                                            "not(@minSteps) and not(@maxSteps)) or (@fixedSteps eq false() "
+                                                            "and @minSteps and @maxSteps and (@maxSteps > @minSteps))\" violated");
                             }
                         } else if (childrenNodeName == "StructuralParameter") {
                             std::shared_ptr<StructuralParameter_t> causality;
@@ -1087,17 +1048,49 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                        slaveDescription->Variables.back().Output != nullptr) ||
                       (slaveDescription->Variables.back().variability == Variability::CONTINUOUS &&
                        slaveDescription->Variables.back().Output != nullptr))) {
-                    std::cerr
-                            << "Assert \"(@variability='fixed'  and boolean(./Parameter)) or "
-                            << "(@variability='tunable' and boolean(./Parameter)) or "
-                            << "(@variability='fixed'  and boolean(./StructuralParameter)) or "
-                            << "(@variability='tunable' and boolean(./StructuralParameter)) or "
-                            << "(@variability='discrete' and boolean(./Input)) or "
-                            << "(@variability='continuous' and boolean(./Input)) or"
-                            << "(@variability='continuous' and boolean(./Output)) or "
-                            << "(@variability='discrete' and boolean(./Output))\" violated"
-                            << std::endl;
-                    return nullptr;
+                    throw std::invalid_argument( "Assert \"(@variability='fixed'  and boolean(./Parameter)) or "
+                                                 "(@variability='tunable' and boolean(./Parameter)) or "
+                                                 "(@variability='fixed'  and boolean(./StructuralParameter)) or "
+                                                 "(@variability='tunable' and boolean(./StructuralParameter)) or "
+                                                 "(@variability='discrete' and boolean(./Input)) or  "
+                                                 "(@variability='continuous' and boolean(./Input)) or "
+                                                 "(@variability='continuous' and boolean(./Output)) or  "
+                                                 "(@variability='discrete' and boolean(./Output))\" violated");
+                }
+            }
+        }
+    }
+
+    //<xs:assert test="every $linkedVR in Variable/*/Dimensions/Dimension/@linkedVR satisfies
+    //                     count(Variable[@valueReference eq $linkedVR]/StructuralParameter) = 1"/>
+    for(auto& variable: slaveDescription->Variables){
+        std::vector<Dimension_t>* v;
+        if(variable.Input != nullptr){
+            v = &variable.Input->dimensions;
+        } else if(variable.Output != nullptr){
+            v = &variable.Output->dimensions;
+        } if(variable.Parameter != nullptr){
+            v = &variable.Parameter->dimensions;
+        }
+        for(auto& dimension : *v){
+            if(dimension.type == DimensionType::LINKED_VR){
+                bool found = false;
+                for(auto& variable: slaveDescription->Variables){
+                    if(variable.valueReference == dimension.value){
+                        if(variable.StructuralParameter == nullptr){
+                            throw std::invalid_argument("Assert \"every $linkedVR in Variable/*/Dimensions/Dimension/@linkedVR "
+                                                        "satisfies count(Variable[@valueReference eq $linkedVR]/StructuralParameter) "
+                                                        "= 1\" violated");
+                        } else {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if(!found){
+                    throw std::invalid_argument("Assert \"every $linkedVR in Variable/*/Dimensions/Dimension/@linkedVR "
+                                                "satisfies count(Variable[@valueReference eq $linkedVR]/StructuralParameter) "
+                                                "= 1\" violated");
                 }
             }
         }
@@ -1136,6 +1129,22 @@ std::shared_ptr<SlaveDescription_t> readSlaveDescription(const char *acuDFile) {
                 }
             }
         }
+    }
+    // <xs:assert test="((./CapabilityFlags/@canProvideLogOnRequest eq true() or
+    // ./CapabilityFlags/@canProvideLogOnNotification eq true()) and boolean(./Log)) or
+    // (./CapabilityFlags/@canProvideLogOnRequest eq false() and
+    // ./CapabilityFlags/@canProvideLogOnNotification eq false() and boolean(./Log) eq false())"/>
+    if(!(((slaveDescription->CapabilityFlags.canProvideLogOnNotification ||
+           slaveDescription->CapabilityFlags.canProvideLogOnRequest)
+          && slaveDescription->Log != nullptr) ||
+         ((!slaveDescription->CapabilityFlags.canProvideLogOnNotification &&
+           !slaveDescription->CapabilityFlags.canProvideLogOnRequest) &&
+          slaveDescription->Log == nullptr))){
+        throw std::invalid_argument("Assert \"((./CapabilityFlags/@canProvideLogOnRequest eq true() or "
+                                    "./CapabilityFlags/@canProvideLogOnNotification eq true()) and boolean(./Log)) or  "
+                                    "./CapabilityFlags/@canProvideLogOnRequest eq false() and  "
+                                    "./CapabilityFlags/@canProvideLogOnNotification eq false() and "
+                                    "boolean(./Log) eq false())\" violated");
     }
     return slaveDescription;
 }

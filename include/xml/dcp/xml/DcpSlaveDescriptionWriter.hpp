@@ -52,6 +52,8 @@ static std::string to_string<uint8_t>(std::vector<uint8_t>& vector) {
 #define TO_STRING_ATTR_WITH_DEFAULT_PTR(str, parent, attribute, default) if(parent != nullptr && parent->attribute != default){ str += #attribute "=\"" + to_string(parent->attribute) + "\" ";}
 
 #define TO_STRING_ATTR_WITH_DEFAULT_BOOL(str, parent, attribute, default) if(parent.attribute != default){ str += #attribute "=\"" + (parent.attribute ? std::string("true") : std::string("false")) + "\" ";}
+#define TO_STRING_ATTR_WITH_DEFAULT_BOOL_PTR(str, parent, attribute, default) if(parent != nullptr && parent->attribute != default){ str += #attribute "=\"" + (parent->attribute ? std::string("true") : std::string("false")) + "\" ";}
+
 #define TO_STRING_OPTIONAL_ATTR_BOOL(str, parent, attribute) if(parent.attribute != nullptr){ str += #attribute "=\"" + (*parent.attribute ? std::string("true") : std::string("false")) + "\" ";}
 
 #define ADD_ATTR(str, parent, attribute) str += #attribute "=\"" + parent.attribute + "\" ";
@@ -361,41 +363,43 @@ static std::string to_string(std::vector<Variable_t> variables) {
             if(variable.Output->Dependencies != nullptr){
                 str += "\t\t\t\t<Dependencies>";
                 NEWLINE(str)
-                str += "\t\t\t\t\t<Initialization ";
-                TO_STRING_ATTR_BOOL(str, variable.Output->Dependencies->Initialization, none)
-                if(variable.Output->Dependencies->Initialization.dependecies.size() == 0){
-                    str += "/>";
-                    NEWLINE(str)
-                } else {
-                    str += ">";
-                    NEWLINE(str)
-                    for(auto& dependency : variable.Output->Dependencies->Initialization.dependecies){
-                        str += "\t\t\t\t\t\t<Dependency ";
-                        TO_STRING_ATTR(str, dependency, vr)
-                        TO_STRING_ATTR(str, dependency, dependenciesKind)
+                if(variable.Output->Dependencies->Initialization != nullptr){
+                    str += "\t\t\t\t\t<Initialization ";
+                    if(variable.Output->Dependencies->Initialization->dependecies.size() == 0){
                         str += "/>";
                         NEWLINE(str)
+                    } else {
+                        str += ">";
+                        NEWLINE(str)
+                        for(auto& dependency : variable.Output->Dependencies->Initialization->dependecies){
+                            str += "\t\t\t\t\t\t<Dependency ";
+                            TO_STRING_ATTR(str, dependency, vr)
+                            TO_STRING_ATTR(str, dependency, dependencyKind)
+                            str += "/>";
+                            NEWLINE(str)
+                        }
+                        str += "\t\t\t\t\t</Initialization>";
+                        NEWLINE(str)
                     }
-                    str += "\t\t\t\t\t</Initialization>";
-                    NEWLINE(str)
                 }
-                str += "\t\t\t\t\t<Run ";
-                TO_STRING_ATTR_BOOL(str, variable.Output->Dependencies->Run, none)
-                if(variable.Output->Dependencies->Run.dependecies.size() == 0){
-                    str += "/>";
-                    NEWLINE(str)
-                } else {
-                    str += ">";
-                    NEWLINE(str)
-                    for(auto& dependency : variable.Output->Dependencies->Run.dependecies){
-                        str += "\t\t\t\t\t\t<Dependency ";
-                        TO_STRING_ATTR(str, dependency, vr)
-                        TO_STRING_ATTR(str, dependency, dependenciesKind)
+                if(variable.Output->Dependencies->Run != nullptr){
+                    str += "\t\t\t\t\t<Run ";
+                    if(variable.Output->Dependencies->Run->dependecies.size() == 0){
                         str += "/>";
                         NEWLINE(str)
+                    } else {
+                        str += ">";
+                        NEWLINE(str)
+                        for(auto& dependency : variable.Output->Dependencies->Run->dependecies){
+                            str += "\t\t\t\t\t\t<Dependency ";
+                            TO_STRING_ATTR(str, dependency, vr)
+                            TO_STRING_ATTR(str, dependency, dependencyKind)
+                            str += "/>";
+                            NEWLINE(str)
+                        }
+                        str += "\t\t\t\t\t</Run>";
+                        NEWLINE(str)
                     }
-                    str += "\t\t\t\t\t</Run>";
-                    NEWLINE(str)
                 }
                 str += "\t\t\t\t</Dependencies>";
                 NEWLINE(str)
@@ -945,23 +949,26 @@ static std::string to_string(OpMode_t opMode) {
     string str = "\t<OpMode>";
     NEWLINE(str)
 
-    str += "\t\t<HardRealTime ";
-    TO_STRING_ATTR_WITH_DEFAULT_BOOL(str, opMode.HardRealTime, set, false)
-    str += "/>";
+    if(opMode.HardRealTime != nullptr){
+        str += "\t\t<HardRealTime/>";
+    }
     NEWLINE(str)
-    str += "\t\t<SoftRealTime ";
-    TO_STRING_ATTR_WITH_DEFAULT_BOOL(str, opMode.SoftRealTime, set, false)
-    str += "/>";
+    if(opMode.SoftRealTime != nullptr){
+        str += "\t\t<SoftRealTime/>";
+    }
     NEWLINE(str)
-    str += "\t\t<NonRealTime ";
-    TO_STRING_ATTR_WITH_DEFAULT_BOOL(str, opMode.NonRealTime, set, false)
-    TO_STRING_ATTR_WITH_DEFAULT(str, opMode.NonRealTime, defaultSteps, 1)
-    TO_STRING_ATTR_WITH_DEFAULT_BOOL(str, opMode.NonRealTime, fixedSteps, true)
-    TO_STRING_ATTR_WITH_DEFAULT(str, opMode.NonRealTime, minSteps, 1)
-    TO_STRING_ATTR_WITH_DEFAULT(str, opMode.NonRealTime, maxSteps, 1)
+    if(opMode.NonRealTime != nullptr){
+        str += "\t\t<NonRealTime ";
+        TO_STRING_ATTR_WITH_DEFAULT_PTR(str, opMode.NonRealTime, defaultSteps, 1)
+        TO_STRING_ATTR_WITH_DEFAULT_BOOL_PTR(str, opMode.NonRealTime, fixedSteps, true)
+        TO_STRING_ATTR_WITH_DEFAULT_PTR(str, opMode.NonRealTime, minSteps, 1)
+        TO_STRING_ATTR_WITH_DEFAULT_PTR(str, opMode.NonRealTime, maxSteps, 1)
 
-    str += "/>";
-    NEWLINE(str)
+        str += "/>";
+        NEWLINE(str)
+    }
+
+
     return str + "\t</OpMode>";
 }
 

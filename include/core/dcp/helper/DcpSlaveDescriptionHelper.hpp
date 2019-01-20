@@ -256,25 +256,25 @@ namespace slavedescription {
 
 
     inline const bool isStepsSupportedNRT(const SlaveDescription_t &slaveDescription, const uint32_t steps) {
-        const NonRealTime_t &nonRealTime = slaveDescription.OpMode.NonRealTime;
-        if (nonRealTime.set) {
-            if (nonRealTime.fixedSteps) {
-                return steps == nonRealTime.defaultSteps;
+        std::shared_ptr<NonRealTime_t> nonRealTime = slaveDescription.OpMode.NonRealTime;
+        if (nonRealTime != nullptr) {
+            if (nonRealTime->fixedSteps) {
+                return steps == nonRealTime->defaultSteps;
             } else {
-                return steps >= nonRealTime.minSteps && steps <= nonRealTime.maxSteps;
+                return steps >= nonRealTime->minSteps && steps <= nonRealTime->maxSteps;
             }
         }
         return false;
     }
 
     inline const std::string supportedStepsNRT(const SlaveDescription_t &slaveDescription) {
-        const NonRealTime_t &nonRealTime = slaveDescription.OpMode.NonRealTime;
-        if (nonRealTime.set) {
-            if (nonRealTime.fixedSteps) {
-                return "(" + std::to_string(nonRealTime.defaultSteps) + ")";
+        std::shared_ptr<NonRealTime_t> nonRealTime = slaveDescription.OpMode.NonRealTime;
+        if (nonRealTime != nullptr) {
+            if (nonRealTime->fixedSteps) {
+                return "(" + std::to_string(nonRealTime->defaultSteps) + ")";
             } else {
-                return "(" + std::to_string(nonRealTime.minSteps) + " - " +
-                       std::to_string(nonRealTime.maxSteps) + ")";
+                return "(" + std::to_string(nonRealTime->minSteps) + " - " +
+                       std::to_string(nonRealTime->maxSteps) + ")";
             }
         }
         return "()";
@@ -282,11 +282,11 @@ namespace slavedescription {
 
 
     inline const bool isOpModeSupported(const SlaveDescription_t &slaveDescription, const DcpOpMode opMode) {
-        if (slaveDescription.OpMode.HardRealTime.set && opMode == DcpOpMode::HRT) {
+        if (slaveDescription.OpMode.HardRealTime != nullptr && opMode == DcpOpMode::HRT) {
             return true;
-        } else if (slaveDescription.OpMode.SoftRealTime.set && opMode == DcpOpMode::SRT) {
+        } else if (slaveDescription.OpMode.SoftRealTime != nullptr&& opMode == DcpOpMode::SRT) {
             return true;
-        } else if (slaveDescription.OpMode.NonRealTime.set && opMode == DcpOpMode::NRT) {
+        } else if (slaveDescription.OpMode.NonRealTime != nullptr && opMode == DcpOpMode::NRT) {
             return true;
         }
         return false;

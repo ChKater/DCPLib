@@ -12,15 +12,24 @@ namespace xsd {
     static const std::string slaveDescription = R"delimiter(
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" elementFormDefault="qualified" attributeFormDefault="unqualified">
 	<xs:annotation>
-		<xs:documentation xml:lang="en">Copyright 2015-2018 ACOSAR Consortium
+		<xs:documentation>Copyright(c) 2008-2011 MODELISAR consortium, 2012-2018 Modelica Association Project "FMI", 2015-2018 ACOSAR consortium, 2018-2019 Modelica Association Project "DCP".
+             All rights reserved.
 
+This file is licensed by the copyright holders under the 3-Clause BSD License
+(https://opensource.org/licenses/BSD-3-Clause):
+
+----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 
 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</xs:documentation>
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+----------------------------------------------------------------------------
+		</xs:documentation>
 	</xs:annotation>
 	<xs:include schemaLocation="dcpUnit.xsd"/>
 	<xs:include schemaLocation="dcpAnnotation.xsd"/>
@@ -33,19 +42,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 				<xs:element name="OpMode">
 					<xs:complexType>
 						<xs:sequence>
-							<xs:element name="HardRealTime">
+							<xs:element name="HardRealTime" minOccurs="0"/>
+							<xs:element name="SoftRealTime" minOccurs="0"/>
+							<xs:element name="NonRealTime" minOccurs="0">
 								<xs:complexType>
-									<xs:attribute name="set" type="xs:boolean" default="false"/>
-								</xs:complexType>
-							</xs:element>
-							<xs:element name="SoftRealTime">
-								<xs:complexType>
-									<xs:attribute name="set" type="xs:boolean" default="false"/>
-								</xs:complexType>
-							</xs:element>
-							<xs:element name="NonRealTime">
-								<xs:complexType>
-									<xs:attribute name="set" type="xs:boolean" default="false"/>
 									<xs:attribute name="defaultSteps" type="xs:unsignedInt" default="1"/>
 									<xs:attribute name="fixedSteps" type="xs:boolean" default="true"/>
 									<xs:attribute name="minSteps" type="xs:unsignedInt">
@@ -58,19 +58,29 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 											<xs:documentation>If fixedCommStepSize is not true.</xs:documentation>
 										</xs:annotation>
 									</xs:attribute>
+
+
 								</xs:complexType>
 							</xs:element>
 						</xs:sequence>
-
 
 					</xs:complexType>
 				</xs:element>
 				<xs:element name="UnitDefinitions" minOccurs="0">
 					<xs:complexType>
 						<xs:sequence maxOccurs="unbounded">
-							<xs:element name="Unit" type="dcpUnit"/>
+							<xs:element name="Unit" type="dcpUnit">
+								<xs:unique name="distinctDisplayUnitName">
+									<xs:selector xpath="DisplayUnit"/>
+									<xs:field xpath="@name"/>
+								</xs:unique>
+							</xs:element>
 						</xs:sequence>
 					</xs:complexType>
+					<xs:unique name="distinctUnitName">
+						<xs:selector xpath="Unit"/>
+						<xs:field xpath="@name"/>
+					</xs:unique>
 				</xs:element>
 				<xs:element name="TypeDefinitions" minOccurs="0">
 					<xs:complexType>
@@ -78,6 +88,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 							<xs:element name="SimpleType" type="dcpSimpleType"/>
 						</xs:sequence>
 					</xs:complexType>
+					<xs:unique name="distinctSimpleTypeName">
+						<xs:selector xpath="SimpleType"/>
+						<xs:field xpath="@name"/>
+					</xs:unique>
 				</xs:element>
 				<xs:element name="VendorAnnotations" type="dcpAnnotation" minOccurs="0"/>
 				<xs:element name="TimeRes">
@@ -184,7 +198,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 						<xs:sequence maxOccurs="unbounded">
 							<xs:element name="Variable" type="dcpVariable"/>
 						</xs:sequence>
+
 					</xs:complexType>
+					<xs:unique name="distinctVariableName">
+						<xs:selector xpath="Variable"/>
+						<xs:field xpath="@name"/>
+					</xs:unique>
+					<xs:unique name="distinctVariableValueReference">
+						<xs:selector xpath="Variable"/>
+						<xs:field xpath="@valueReference"/>
+					</xs:unique>
 				</xs:element>
 				<xs:element name="Log" minOccurs="0">
 					<xs:complexType>
@@ -200,6 +223,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 										</xs:element>
 									</xs:sequence>
 								</xs:complexType>
+								<xs:unique name="distinctCategoryId">
+									<xs:selector xpath="Category"/>
+									<xs:field xpath="@id"/>
+								</xs:unique>
+								<xs:unique name="distinctCategoryName">
+									<xs:selector xpath="Category"/>
+									<xs:field xpath="@name"/>
+								</xs:unique>
 							</xs:element>
 							<xs:element name="Templates">
 								<xs:complexType>
@@ -214,9 +245,21 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 										</xs:element>
 									</xs:sequence>
 								</xs:complexType>
+								<xs:unique name="distinctTemplateId">
+									<xs:selector xpath="Template"/>
+									<xs:field xpath="@id"/>
+								</xs:unique>
 							</xs:element>
 						</xs:sequence>
 					</xs:complexType>
+					<xs:key name="LogCategoryKey">
+						<xs:selector xpath="Categories/Category"/>
+						<xs:field xpath="@id"/>
+					</xs:key>
+					<xs:keyref name="LogCategoryKeyRef" refer="LogCategoryKey">
+						<xs:selector xpath="Templates/Template"/>
+						<xs:field xpath="@category"/>
+					</xs:keyref>
 				</xs:element>
 			</xs:sequence>
 			<xs:attribute name="dcpMajorVersion" type="xs:unsignedByte" use="required">
@@ -273,47 +316,41 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 				</xs:simpleType>
 			</xs:attribute>
 
-		</xs:complexType>
-	</xs:element>
-</xs:schema>
-    )delimiter";
 
-    static const std::string dcpAnnotation = R"delimiter(
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
-	<xs:complexType name="dcpAnnotation">
-		<xs:sequence maxOccurs="unbounded">
-			<xs:element name="Tool">
-				<xs:annotation>
-					<xs:documentation>Tool specific annotation (ignored by other tools).</xs:documentation>
-				</xs:annotation>
-				<xs:complexType>
-					<xs:sequence>
-						<xs:any namespace="##any" processContents="lax" minOccurs="0"/>
-					</xs:sequence>
-					<xs:attribute name="name" type="xs:normalizedString" use="required">
-						<xs:annotation>
-							<xs:documentation>Name of tool that can interpret the annotation. "name" must be unique with respect to all other elements of the VendorAnnotation list.</xs:documentation>
-						</xs:annotation>
-					</xs:attribute>
-				</xs:complexType>
-			</xs:element>
-		</xs:sequence>
-	</xs:complexType>
+		</xs:complexType>
+		<xs:key name="SimpleTypeKey">
+			<xs:selector xpath="TypeDefinitions/SimpleType"/>
+			<xs:field xpath="@name"/>
+		</xs:key>
+		<xs:keyref name="SimpleTypeKeyRef" refer="SimpleTypeKey">
+			<xs:selector xpath="Variables/Variable"/>
+			<xs:field xpath="@declaredType"/>
+		</xs:keyref>
+	</xs:element>
 </xs:schema>
     )delimiter";
 
     static const std::string dcpAttributeGroups = R"delimiter(
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" elementFormDefault="qualified" attributeFormDefault="unqualified">
 	<xs:annotation>
-		<xs:documentation xml:lang="en">Copyright 2015-2018 ACOSAR Consortium
+		<xs:documentation>Copyright(c) 2008-2011 MODELISAR consortium, 2012-2018 Modelica Association Project "FMI", 2015-2018 ACOSAR consortium, 2018-2019 Modelica Association Project "DCP".
+             All rights reserved.
 
+This file is licensed by the copyright holders under the 3-Clause BSD License
+(https://opensource.org/licenses/BSD-3-Clause):
+
+----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 
 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</xs:documentation>
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+----------------------------------------------------------------------------
+		</xs:documentation>
 	</xs:annotation>
 	<xs:attributeGroup name="commonAttributes"/>
 	<xs:attributeGroup name="dcpInteger8Attributes">
@@ -388,12 +425,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 	</xs:attributeGroup>
 	<xs:attributeGroup name="dcpStringAttributes">
 		<xs:attribute name="maxSize" type="xs:unsignedInt"/>
-		<xs:attribute name="start" type="xs:normalizedString"/>
 	</xs:attributeGroup>
 	<xs:attributeGroup name="dcpBinaryAttributes">
 		<xs:attribute name="mimeType" type="xs:normalizedString" default="application/octet-stream"/>
 		<xs:attribute name="maxSize" type="xs:unsignedInt"/>
-		<xs:attribute name="start" type="xs:hexBinary"/>
 	</xs:attributeGroup>
 	<xs:attributeGroup name="dcpFloatAttributes">
 		<xs:attribute name="quantity" type="xs:normalizedString"/>
@@ -403,18 +438,71 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 </xs:schema>
     )delimiter";
 
-    static const std::string dcpDataTypes = R"delimiter(
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    static const std::string dcpAnnotation = R"delimiter(
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
 	<xs:annotation>
-		<xs:documentation xml:lang="en">Copyright 2015-2018 ACOSAR Consortium
+		<xs:documentation>Copyright(c) 2008-2011 MODELISAR consortium, 2012-2018 Modelica Association Project "FMI", 2015-2018 ACOSAR consortium, 2018-2019 Modelica Association Project "DCP".
+             All rights reserved.
 
+This file is licensed by the copyright holders under the 3-Clause BSD License
+(https://opensource.org/licenses/BSD-3-Clause):
+
+----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 
 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</xs:documentation>
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+----------------------------------------------------------------------------
+		</xs:documentation>
+	</xs:annotation>
+	<xs:complexType name="dcpAnnotation">
+		<xs:sequence maxOccurs="unbounded">
+			<xs:element name="Tool">
+				<xs:annotation>
+					<xs:documentation>Tool specific annotation (ignored by other tools).</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:any namespace="##any" processContents="lax" minOccurs="0"/>
+					</xs:sequence>
+					<xs:attribute name="name" type="xs:normalizedString" use="required">
+						<xs:annotation>
+							<xs:documentation>Name of tool that can interpret the annotation. "name" must be unique with respect to all other elements of the VendorAnnotation list.</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>
+    )delimiter";
+
+    static const std::string dcpDataTypes = R"delimiter(
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" elementFormDefault="qualified" attributeFormDefault="unqualified" vc:minVersion="1.1">
+	<xs:annotation>
+		<xs:documentation>Copyright(c) 2008-2011 MODELISAR consortium, 2012-2018 Modelica Association Project "FMI", 2015-2018 ACOSAR consortium, 2018-2019 Modelica Association Project "DCP".
+             All rights reserved.
+
+This file is licensed by the copyright holders under the 3-Clause BSD License
+(https://opensource.org/licenses/BSD-3-Clause):
+
+----------------------------------------------------------------------------
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+----------------------------------------------------------------------------
+		</xs:documentation>
 	</xs:annotation>
 	<xs:include schemaLocation="dcpAttributeGroups.xsd"/>
 	<xs:complexType name="baseType">
@@ -505,11 +593,30 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 		</xs:complexContent>
 	</xs:complexType>
 </xs:schema>
-
     )delimiter";
 
     static const std::string dcpTransportProtocol = R"delimiter(
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:annotation>
+		<xs:documentation>Copyright(c) 2008-2011 MODELISAR consortium, 2012-2018 Modelica Association Project "FMI", 2015-2018 ACOSAR consortium, 2018-2019 Modelica Association Project "DCP".
+             All rights reserved.
+
+This file is licensed by the copyright holders under the 3-Clause BSD License
+(https://opensource.org/licenses/BSD-3-Clause):
+
+----------------------------------------------------------------------------
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+----------------------------------------------------------------------------
+		</xs:documentation>
+	</xs:annotation>
 	<xs:complexType name="dcpIPv4Type">
 		<xs:sequence>
 			<xs:element name="Control" minOccurs="0">
@@ -623,15 +730,24 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     static const std::string dcpType = R"delimiter(
 <xs:schema xmlns:ds="http://www.dcp-standard.org/dcpType.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
 	<xs:annotation>
-		<xs:documentation xml:lang="en">Copyright 2015-2018 ACOSAR Consortium
+		<xs:documentation>Copyright(c) 2008-2011 MODELISAR consortium, 2012-2018 Modelica Association Project "FMI", 2015-2018 ACOSAR consortium, 2018-2019 Modelica Association Project "DCP".
+             All rights reserved.
 
+This file is licensed by the copyright holders under the 3-Clause BSD License
+(https://opensource.org/licenses/BSD-3-Clause):
+
+----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 
 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</xs:documentation>
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+----------------------------------------------------------------------------
+		</xs:documentation>
 	</xs:annotation>
 	<xs:include schemaLocation="dcpAttributeGroups.xsd"/>
 	<xs:include schemaLocation="dcpDataTypes.xsd"/>
@@ -674,7 +790,27 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     )delimiter";
 
     static const std::string dcpUnit = R"delimiter(
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+<!-- edited with XMLSpy v2014 rel. 2 (http://www.altova.com) by Martin Krammer (Kompetenzzentrum -) --><xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:annotation>
+		<xs:documentation>Copyright(c) 2008-2011 MODELISAR consortium, 2012-2018 Modelica Association Project "FMI", 2015-2018 ACOSAR consortium, 2018-2019 Modelica Association Project "DCP".
+             All rights reserved.
+
+This file is licensed by the copyright holders under the 3-Clause BSD License
+(https://opensource.org/licenses/BSD-3-Clause):
+
+----------------------------------------------------------------------------
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+----------------------------------------------------------------------------
+		</xs:documentation>
+	</xs:annotation>
 	<xs:complexType name="dcpUnit">
 		<xs:annotation>
 			<xs:documentation>Unit definition (with respect to SI base units) and default display units</xs:documentation>
@@ -757,650 +893,704 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
     static const std::string dcpVariable = R"delimiter(
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" elementFormDefault="qualified"
-	attributeFormDefault="unqualified" >
-	<xs:annotation>
-		<xs:documentation xml:lang="en">Copyright 2015-2018 ACOSAR Consortium
+    xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" elementFormDefault="qualified"
+    attributeFormDefault="unqualified" vc:minVersion="1.1">
+    <xs:annotation>
+        <xs:documentation>Copyright(c) 2008-2011 MODELISAR consortium, 2012-2018 Modelica Association Project "FMI", 2015-2018 ACOSAR consortium, 2018-2019 Modelica Association Project "DCP".
+             All rights reserved.
 
+This file is licensed by the copyright holders under the 3-Clause BSD License
+(https://opensource.org/licenses/BSD-3-Clause):
+
+----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 
 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</xs:documentation>
-	</xs:annotation>
-	<xs:include schemaLocation="dcpType.xsd"/>
-	<xs:include schemaLocation="dcpAnnotation.xsd"/>
-	<xs:include schemaLocation="dcpDataTypes.xsd"/>
-	<xs:attribute name="declaredType" type="xs:normalizedString">
-		<xs:annotation>
-			<xs:documentation>If present, name of type defined with TypeDefinitions / SimpleType providing defaults.</xs:documentation>
-		</xs:annotation>
-	</xs:attribute>
-	<xs:attributeGroup name="timeInstanceDeviation">
-		<xs:attribute name="preEdge" type="xs:double"/>
-		<xs:attribute name="postEdge" type="xs:double"/>
-		<xs:attribute name="maxConsecMissedPdus" type="xs:unsignedInt"/>
-	</xs:attributeGroup>
-	<xs:complexType name="dcpVariable">
-		<xs:annotation>
-			<xs:documentation>Properties of a scalar variable</xs:documentation>
-		</xs:annotation>
-		<xs:sequence>
-			<xs:choice>
-				<xs:element name="Input">
-					<xs:complexType>
-						<xs:sequence>
-							<xs:choice>
-								<xs:element name="Int8">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger8Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:byte"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Int16">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger16Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:short"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Int32">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger32Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:integer"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Int64">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger64Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:long"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint8">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger8Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedByte"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint16">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger16Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedShort"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint32">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger32Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedInt"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint64">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger64Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedLong"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Float32">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpFloat32Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:float"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Float64">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpFloat64Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:double"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="String" type="dcpStringType"/>
-								<xs:element name="Binary" type="dcpBinaryType"/>
-							</xs:choice>
-							<xs:element name="Dimensions" type="dcpDimensionsType" minOccurs="0"/>
-						</xs:sequence>
-					</xs:complexType>
-				</xs:element>
-				<xs:element name="Output">
-					<xs:complexType>
-						<xs:sequence>
-							<xs:choice>
-								<xs:element name="Int8">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger8Type">
-												<xs:attribute name="start">
-												<xs:simpleType>
-												<xs:list itemType="xs:byte"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Int16">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger16Type">
-												<xs:attribute name="start">
-												<xs:simpleType>
-												<xs:list itemType="xs:short"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Int32">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger32Type">
-												<xs:attribute name="start">
-												<xs:simpleType>
-												<xs:list itemType="xs:integer"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Int64">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger64Type">
-												<xs:attribute name="start">
-												<xs:simpleType>
-												<xs:list itemType="xs:long"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint8">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger8Type">
-												<xs:attribute name="start">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedInt"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint16">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger16Type">
-												<xs:attribute name="start">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedShort"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint32">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger32Type">
-												<xs:attribute name="start">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedInt"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint64">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger64Type">
-												<xs:attribute name="start">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedLong"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Float32">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpFloat32Type">
-												<xs:attribute name="start">
-												<xs:simpleType>
-												<xs:list itemType="xs:float"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Float64">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpFloat64Type">
-												<xs:attribute name="start">
-												<xs:simpleType>
-												<xs:list itemType="xs:double"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="String" type="dcpStringType"/>
-								<xs:element name="Binary" type="dcpBinaryType"/>
-							</xs:choice>
-							<xs:element name="Dimensions" type="dcpDimensionsType" minOccurs="0"/>
-							<xs:element name="Dependencies" minOccurs="0">
-								<xs:complexType>
-									<xs:sequence>
-										<xs:element name="Initialization">
-											<xs:complexType>
-												<xs:sequence minOccurs="0" maxOccurs="unbounded">
-												<xs:element name="Dependency"
-												type="dcpDependencyType"/>
-												</xs:sequence>
-												<xs:attribute name="none" type="xs:boolean"
-												use="optional" default="false"/>
-											</xs:complexType>
-										</xs:element>
-										<xs:element name="Run">
-											<xs:complexType>
-												<xs:sequence minOccurs="0" maxOccurs="unbounded">
-												<xs:element name="Dependency"
-												type="dcpDependencyType"/>
-												</xs:sequence>
-												<xs:attribute name="none" type="xs:boolean"
-												use="optional" default="false"/>
-											</xs:complexType>
-										</xs:element>
-									</xs:sequence>
-								</xs:complexType>
-							</xs:element>
-						</xs:sequence>
-						<xs:attribute name="defaultSteps" default="1">
-							<xs:simpleType>
-								<xs:restriction base="xs:unsignedInt">
-									<xs:minInclusive value="1"/>
-								</xs:restriction>
-							</xs:simpleType>
-						</xs:attribute>
-						<xs:attribute name="fixedSteps" type="xs:boolean" default="true"/>
-						<xs:attribute name="minSteps">
-							<xs:simpleType>
-								<xs:restriction base="xs:unsignedInt">
-									<xs:minInclusive value="1"/>
-								</xs:restriction>
-							</xs:simpleType>
-						</xs:attribute>
-						<xs:attribute name="maxSteps">
-							<xs:simpleType>
-								<xs:restriction base="xs:unsignedInt">
-									<xs:minExclusive value="1"/>
-								</xs:restriction>
-							</xs:simpleType>
-						</xs:attribute>
-						<xs:attribute name="initialization" type="xs:boolean" default="false"/>
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
-					</xs:complexType>
-				</xs:element>
-				<xs:element name="Parameter">
-					<xs:complexType>
-						<xs:sequence>
-							<xs:choice>
-								<xs:element name="Int8">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger8Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:byte"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Int16">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger16Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:short"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Int32">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger32Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:int"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Int64">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpInteger64Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:long"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint8">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger8Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedByte"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint16">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger16Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedShort"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint32">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger32Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedInt"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Uint64">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpUnsignedInteger64Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:unsignedLong"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Float32">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpFloat32Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:float"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="Float64">
-									<xs:complexType>
-										<xs:complexContent>
-											<xs:extension base="dcpFloat64Type">
-												<xs:attribute name="start" use="required">
-												<xs:simpleType>
-												<xs:list itemType="xs:double"/>
-												</xs:simpleType>
-												</xs:attribute>
-											</xs:extension>
-										</xs:complexContent>
-									</xs:complexType>
-								</xs:element>
-								<xs:element name="String" type="dcpStringType"/>
-								<xs:element name="Binary" type="dcpBinaryType"/>
-							</xs:choice>
-							<xs:element name="Dimensions" type="dcpDimensionsType" minOccurs="0"/>
-						</xs:sequence>
-					</xs:complexType>
-				</xs:element>
-				<xs:element name="StructuralParameter">
-					<xs:complexType>
-						<xs:choice>
-							<xs:element name="Uint8">
-								<xs:complexType>
-									<xs:attribute name="start" use="required">
-										<xs:simpleType>
-											<xs:restriction base="xs:unsignedByte">
-												<xs:minInclusive value="1"/>
-											</xs:restriction>
-										</xs:simpleType>
-									</xs:attribute>
-								</xs:complexType>
-							</xs:element>
-							<xs:element name="Uint16">
-								<xs:complexType>
-									<xs:attribute name="start" use="required">
-										<xs:simpleType>
-											<xs:restriction base="xs:unsignedShort">
-												<xs:minInclusive value="1"/>
-											</xs:restriction>
-										</xs:simpleType>
-									</xs:attribute>
-								</xs:complexType>
-							</xs:element>
-							<xs:element name="Uint32">
-								<xs:complexType>
-									<xs:attribute name="start" use="required">
-										<xs:simpleType>
-											<xs:restriction base="xs:unsignedInt">
-												<xs:minInclusive value="1"/>
-											</xs:restriction>
-										</xs:simpleType>
-									</xs:attribute>
-								</xs:complexType>
-							</xs:element>
-							<xs:element name="Uint64">
-								<xs:complexType>
-									<xs:attribute name="start" use="required">
-										<xs:simpleType>
-											<xs:restriction base="xs:unsignedLong">
-												<xs:minInclusive value="1"/>
-											</xs:restriction>
-										</xs:simpleType>
-									</xs:attribute>
-								</xs:complexType>
-							</xs:element>
-						</xs:choice>
-					</xs:complexType>
-				</xs:element>
-			</xs:choice>
-			<xs:element name="Annotations" type="dcpAnnotation" minOccurs="0">
-				<xs:annotation>
-					<xs:documentation>Additional data of the scalar variable, e.g., for the dialog menu or the graphical layout</xs:documentation>
-				</xs:annotation>
-			</xs:element>
-		</xs:sequence>
-		<xs:attribute name="name" type="xs:normalizedString" use="required">
-			<xs:annotation>
-				<xs:documentation>Identifier of variable, e.g. "a.b.mod[3,4].'#123'.c". "name" must be unique with respect to all other elements of the ModelVariables list</xs:documentation>
-			</xs:annotation>
-		</xs:attribute>
-		<xs:attribute name="valueReference" type="xs:unsignedLong" use="required">
-			<xs:annotation>
-				<xs:documentation>Identifier for variable value in DCP PDUs (unique with respect to all variables)</xs:documentation>
-			</xs:annotation>
-		</xs:attribute>
-		<xs:attribute name="description" type="xs:string"/>
-		<xs:attribute name="variability" default="continuous">
-			<xs:annotation>
-				<xs:documentation>constant: value never changes
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+----------------------------------------------------------------------------
+		</xs:documentation>
+    </xs:annotation>
+    <xs:include schemaLocation="dcpType.xsd"/>
+    <xs:include schemaLocation="dcpAnnotation.xsd"/>
+    <xs:include schemaLocation="dcpDataTypes.xsd"/>
+    <xs:attribute name="declaredType" type="xs:normalizedString">
+        <xs:annotation>
+            <xs:documentation>If present, name of type defined with TypeDefinitions / SimpleType providing defaults.</xs:documentation>
+        </xs:annotation>
+    </xs:attribute>
+    <xs:attributeGroup name="timeInstanceDeviation">
+        <xs:attribute name="preEdge" type="xs:double"/>
+        <xs:attribute name="postEdge" type="xs:double"/>
+        <xs:attribute name="maxConsecMissedPdus" type="xs:unsignedInt"/>
+    </xs:attributeGroup>
+    <xs:complexType name="dcpVariable">
+        <xs:annotation>
+            <xs:documentation>Properties of a scalar variable</xs:documentation>
+        </xs:annotation>
+        <xs:sequence>
+            <xs:choice>
+                <xs:element name="Input">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:choice>
+                                <xs:element name="Int8">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger8Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:byte"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Int16">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger16Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:short"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Int32">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger32Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:integer"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Int64">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger64Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:long"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint8">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger8Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedByte"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint16">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger16Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedShort"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint32">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger32Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedInt"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint64">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger64Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedLong"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Float32">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpFloat32Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:float"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Float64">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpFloat64Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:double"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="String">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpStringType">
+                                                <xs:attribute name="start"
+                                                  type="xs:normalizedString" use="required"/>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Binary">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpBinaryType">
+                                                <xs:attribute name="start" type="xs:hexBinary"
+                                                  use="required"/>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                            </xs:choice>
+                            <xs:element name="Dimensions" type="dcpDimensionsType" minOccurs="0"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="Output">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:choice>
+                                <xs:element name="Int8">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger8Type">
+                                                <xs:attribute name="start">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:byte"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Int16">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger16Type">
+                                                <xs:attribute name="start">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:short"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Int32">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger32Type">
+                                                <xs:attribute name="start">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:integer"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Int64">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger64Type">
+                                                <xs:attribute name="start">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:long"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint8">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger8Type">
+                                                <xs:attribute name="start">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedInt"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint16">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger16Type">
+                                                <xs:attribute name="start">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedShort"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint32">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger32Type">
+                                                <xs:attribute name="start">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedInt"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint64">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger64Type">
+                                                <xs:attribute name="start">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedLong"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Float32">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpFloat32Type">
+                                                <xs:attribute name="start">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:float"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Float64">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpFloat64Type">
+                                                <xs:attribute name="start">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:double"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="String">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpStringType">
+                                                <xs:attribute name="start"
+                                                  type="xs:normalizedString"/>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Binary">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpBinaryType">
+                                                <xs:attribute name="start" type="xs:hexBinary"/>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                            </xs:choice>
+                            <xs:element name="Dimensions" type="dcpDimensionsType" minOccurs="0"/>
+                            <xs:element name="Dependencies" minOccurs="0">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="Initialization" minOccurs="0">
+                                            <xs:complexType>
+                                                <xs:sequence minOccurs="0" maxOccurs="unbounded">
+                                                  <xs:element name="Dependency"
+                                                  type="dcpDependencyType"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                        <xs:element name="Run" minOccurs="0">
+                                            <xs:complexType>
+                                                <xs:sequence minOccurs="0" maxOccurs="unbounded">
+                                                  <xs:element name="Dependency"
+                                                  type="dcpDependencyType"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                        <xs:attribute name="defaultSteps" default="1">
+                            <xs:simpleType>
+                                <xs:restriction base="xs:unsignedInt">
+                                    <xs:minInclusive value="1"/>
+                                </xs:restriction>
+                            </xs:simpleType>
+                        </xs:attribute>
+                        <xs:attribute name="fixedSteps" type="xs:boolean" default="true"/>
+                        <xs:attribute name="minSteps">
+                            <xs:simpleType>
+                                <xs:restriction base="xs:unsignedInt">
+                                    <xs:minInclusive value="1"/>
+                                </xs:restriction>
+                            </xs:simpleType>
+                        </xs:attribute>
+                        <xs:attribute name="maxSteps">
+                            <xs:simpleType>
+                                <xs:restriction base="xs:unsignedInt">
+                                    <xs:minExclusive value="1"/>
+                                </xs:restriction>
+                            </xs:simpleType>
+                        </xs:attribute>
+                        <xs:attribute name="initialization" type="xs:boolean" default="false"/>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="Parameter">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:choice>
+                                <xs:element name="Int8">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger8Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:byte"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Int16">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger16Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:short"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Int32">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger32Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:int"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Int64">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpInteger64Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:long"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint8">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger8Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedByte"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint16">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger16Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedShort"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint32">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger32Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedInt"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Uint64">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpUnsignedInteger64Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:unsignedLong"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Float32">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpFloat32Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:float"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Float64">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpFloat64Type">
+                                                <xs:attribute name="start" use="required">
+                                                  <xs:simpleType>
+                                                  <xs:list itemType="xs:double"/>
+                                                  </xs:simpleType>
+                                                </xs:attribute>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="String">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpStringType">
+                                                <xs:attribute name="start"
+                                                  type="xs:normalizedString" use="required"/>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Binary">
+                                    <xs:complexType>
+                                        <xs:complexContent>
+                                            <xs:extension base="dcpBinaryType">
+                                                <xs:attribute name="start" type="xs:hexBinary"
+                                                  use="required"/>
+                                            </xs:extension>
+                                        </xs:complexContent>
+                                    </xs:complexType>
+                                </xs:element>
+                            </xs:choice>
+                            <xs:element name="Dimensions" type="dcpDimensionsType" minOccurs="0"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="StructuralParameter">
+                    <xs:complexType>
+                        <xs:choice>
+                            <xs:element name="Uint8">
+                                <xs:complexType>
+                                    <xs:attribute name="start" use="required">
+                                        <xs:simpleType>
+                                            <xs:restriction base="xs:unsignedByte">
+                                                <xs:minInclusive value="1"/>
+                                            </xs:restriction>
+                                        </xs:simpleType>
+                                    </xs:attribute>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="Uint16">
+                                <xs:complexType>
+                                    <xs:attribute name="start" use="required">
+                                        <xs:simpleType>
+                                            <xs:restriction base="xs:unsignedShort">
+                                                <xs:minInclusive value="1"/>
+                                            </xs:restriction>
+                                        </xs:simpleType>
+                                    </xs:attribute>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="Uint32">
+                                <xs:complexType>
+                                    <xs:attribute name="start" use="required">
+                                        <xs:simpleType>
+                                            <xs:restriction base="xs:unsignedInt">
+                                                <xs:minInclusive value="1"/>
+                                            </xs:restriction>
+                                        </xs:simpleType>
+                                    </xs:attribute>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="Uint64">
+                                <xs:complexType>
+                                    <xs:attribute name="start" use="required">
+                                        <xs:simpleType>
+                                            <xs:restriction base="xs:unsignedLong">
+                                                <xs:minInclusive value="1"/>
+                                            </xs:restriction>
+                                        </xs:simpleType>
+                                    </xs:attribute>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:choice>
+                    </xs:complexType>
+                </xs:element>
+            </xs:choice>
+            <xs:element name="Annotations" type="dcpAnnotation" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>Additional data of the scalar variable, e.g., for the dialog menu or the graphical layout</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="name" type="xs:normalizedString" use="required">
+            <xs:annotation>
+                <xs:documentation>Identifier of variable, e.g. "a.b.mod[3,4].'#123'.c". "name" must be unique with respect to all other elements of the ModelVariables list</xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="valueReference" type="xs:unsignedLong" use="required">
+            <xs:annotation>
+                <xs:documentation>Identifier for variable value in DCP PDUs (unique with respect to all variables)</xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="description" type="xs:string"/>
+        <xs:attribute name="variability" default="continuous">
+            <xs:annotation>
+                <xs:documentation>constant: value never changes
 fixed: value fixed after initialization
 tunable: value constant between external events
 discrete: value constant between internal events
 continuous: no restriction on value changes</xs:documentation>
-			</xs:annotation>
-			<xs:simpleType>
-				<xs:restriction base="xs:normalizedString">
-					<xs:enumeration value="fixed"/>
-					<xs:enumeration value="tunable"/>
-					<xs:enumeration value="discrete"/>
-					<xs:enumeration value="continuous"/>
-				</xs:restriction>
-			</xs:simpleType>
-		</xs:attribute>
-		<xs:attributeGroup ref="timeInstanceDeviation"/>
-		<xs:attribute ref="declaredType"/>
-	</xs:complexType>
-	<xs:complexType name="dcpDimensionsType">
-		<xs:sequence maxOccurs="unbounded">
-			<xs:element name="Dimension">
-				<xs:complexType>
-					<xs:attribute name="constant">
-						<xs:simpleType>
-							<xs:restriction base="xs:unsignedLong">
-								<xs:minInclusive value="1"/>
-							</xs:restriction>
-						</xs:simpleType>
-					</xs:attribute>
-					<xs:attribute name="linkedVR" type="xs:unsignedLong"/>
-
-				</xs:complexType>
-			</xs:element>
-		</xs:sequence>
-	</xs:complexType>
-	<xs:complexType name="dcpVariableType">
-		<xs:sequence>
-			<xs:choice>
-				<xs:element name="Int8" type="dcpInteger8Type"/>
-				<xs:element name="Int16" type="dcpInteger16Type"/>
-				<xs:element name="Int32" type="dcpInteger32Type"/>
-				<xs:element name="Int64" type="dcpInteger64Type"/>
-				<xs:element name="Uint8" type="dcpUnsignedInteger8Type"/>
-				<xs:element name="Uint16" type="dcpUnsignedInteger16Type"/>
-				<xs:element name="Uint32" type="dcpUnsignedInteger32Type"/>
-				<xs:element name="Uint64" type="dcpUnsignedInteger64Type"/>
-				<xs:element name="Float32" type="dcpFloat32Type"/>
-				<xs:element name="Float64" type="dcpFloat64Type"/>
-				<xs:element name="String" type="dcpStringType"/>
-				<xs:element name="Binary" type="dcpBinaryType"/>
-			</xs:choice>
-			<xs:element name="Dimensions" type="dcpDimensionsType" minOccurs="0"/>
-		</xs:sequence>
-	</xs:complexType>
-	<xs:complexType name="dcpDependencyType">
-		<xs:attribute name="vr" type="xs:unsignedLong" use="required"/>
-		<xs:attribute name="dependenciesKind" use="required">
-			<xs:simpleType>
-				<xs:restriction base="xs:string">
-					<xs:enumeration value="dependent"/>
-					<xs:enumeration value="linear"/>
-				</xs:restriction>
-			</xs:simpleType>
-		</xs:attribute>
-	</xs:complexType>
+            </xs:annotation>
+            <xs:simpleType>
+                <xs:restriction base="xs:normalizedString">
+                    <xs:enumeration value="fixed"/>
+                    <xs:enumeration value="tunable"/>
+                    <xs:enumeration value="discrete"/>
+                    <xs:enumeration value="continuous"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+        <xs:attributeGroup ref="timeInstanceDeviation"/>
+        <xs:attribute ref="declaredType"/>
+    </xs:complexType>
+    <xs:complexType name="dcpDimensionsType">
+        <xs:sequence maxOccurs="unbounded">
+            <xs:element name="Dimension">
+                <xs:complexType>
+                    <xs:attribute name="constant">
+                        <xs:simpleType>
+                            <xs:restriction base="xs:unsignedLong">
+                                <xs:minInclusive value="1"/>
+                            </xs:restriction>
+                        </xs:simpleType>
+                    </xs:attribute>
+                    <xs:attribute name="linkedVR" type="xs:unsignedLong"/>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="dcpVariableType">
+        <xs:sequence>
+            <xs:choice>
+                <xs:element name="Int8" type="dcpInteger8Type"/>
+                <xs:element name="Int16" type="dcpInteger16Type"/>
+                <xs:element name="Int32" type="dcpInteger32Type"/>
+                <xs:element name="Int64" type="dcpInteger64Type"/>
+                <xs:element name="Uint8" type="dcpUnsignedInteger8Type"/>
+                <xs:element name="Uint16" type="dcpUnsignedInteger16Type"/>
+                <xs:element name="Uint32" type="dcpUnsignedInteger32Type"/>
+                <xs:element name="Uint64" type="dcpUnsignedInteger64Type"/>
+                <xs:element name="Float32" type="dcpFloat32Type"/>
+                <xs:element name="Float64" type="dcpFloat64Type"/>
+                <xs:element name="String" type="dcpStringType"/>
+                <xs:element name="Binary" type="dcpBinaryType"/>
+            </xs:choice>
+            <xs:element name="Dimensions" type="dcpDimensionsType" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="dcpDependencyType">
+        <xs:attribute name="vr" type="xs:unsignedLong" use="required"/>
+        <xs:attribute name="dependencyKind" use="required">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="dependent"/>
+                    <xs:enumeration value="linear"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:complexType>
 </xs:schema>
     )delimiter";
-
-
 }
 
 
