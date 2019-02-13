@@ -11,7 +11,8 @@ option(BUILD_ETHERNET "Build neccessary parts to use UDP driver." OFF)
 option(BUILD_BLUETOOTH "Build neccessary parts to use the Bluetooth RFCOMM driver." OFF)
 option(BUILD_SLAVE "Build neccessary parts to implement an DCP slave." OFF)
 option(BUILD_MASTER "Build neccessary parts to implement an DCP master." OFF)
-option(BUILD_XML "Build neccessary parts for handling slave deescription XML files" OFF)
+option(BUILD_XML "Build neccessary parts for handling slave description XML files" OFF)
+option(BUILD_ZIP "Build neccessary parts for handling slave zip files" OFF)
 
 
 add_definitions(-DDEBUG)
@@ -160,6 +161,29 @@ if(BUILD_ALL OR BUILD_XML)
     install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/xml DESTINATION include/DCPLib)
 endif(BUILD_ALL OR BUILD_XML)
 
+if(BUILD_ALL OR BUILD_ZIP)
+
+    add_library(Zip INTERFACE)
+    add_library(DCPLib::Zip ALIAS Zip)
+
+    target_link_libraries(Zip INTERFACE DCPLib::Xml)
+    target_link_libraries(Zip INTERFACE zip)
+
+    target_include_directories(Zip INTERFACE
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/zip>
+            $<INSTALL_INTERFACE:include/DCPLib/zip>
+            )
+
+    install(TARGETS Zip
+            EXPORT DCPLib-targets
+            COMPONENT Zip
+            ARCHIVE DESTINATION lib
+            LIBRARY DESTINATION lib
+            RUNTIME DESTINATION bin)
+
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/zip DESTINATION include/DCPLib)
+endif(BUILD_ALL OR BUILD_ZIP)
+
 
 install(EXPORT DCPLib-targets
         FILE
@@ -171,5 +195,5 @@ install(EXPORT DCPLib-targets
 
 
 add_executable(mytest src/test/BasicChecks.cpp)
-target_link_libraries(mytest DCPLib::Ethernet DCPLib::Bluetooth DCPLib::Master DCPLib::Slave DCPLib::Xml)
+target_link_libraries(mytest DCPLib::Ethernet DCPLib::Bluetooth DCPLib::Master DCPLib::Slave DCPLib::Xml DCPLib::Zip)
 
