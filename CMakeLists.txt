@@ -6,6 +6,8 @@ project(DCPLib VERSION 0.1)
 # use c++11 features, requires cmake > 3.1
 set(CMAKE_CXX_STANDARD 11)
 
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
 option(BUILD_ALL "Build all parts of the DCPLib" ON)
 option(BUILD_ETHERNET "Build neccessary parts to use UDP driver." OFF)
 option(BUILD_BLUETOOTH "Build neccessary parts to use the Bluetooth RFCOMM driver." OFF)
@@ -38,12 +40,13 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/core DESTINATION include/DCPLib)
 
 if(BUILD_ALL OR BUILD_ETHERNET)
     find_package(Threads REQUIRED)
+	find_package(ASIO REQUIRED )
 
     ##dcplib ethernet
     add_library(Ethernet INTERFACE)
     add_library(DCPLib::Ethernet ALIAS Ethernet)
 
-    target_link_libraries(Ethernet INTERFACE Threads::Threads)
+    target_link_libraries(Ethernet INTERFACE Threads::Threads ASIO::ASIO)
     target_link_libraries(Ethernet INTERFACE DCPLib::Core)
     if(WIN32)
         target_link_libraries(Ethernet INTERFACE wsock32 ws2_32)
@@ -162,11 +165,12 @@ if(BUILD_ALL OR BUILD_XML)
 endif(BUILD_ALL OR BUILD_XML)
 
 if(BUILD_ALL OR BUILD_ZIP)
+	find_package(Zip REQUIRED)
 
     add_library(Zip INTERFACE)
     add_library(DCPLib::Zip ALIAS Zip)
 
-    target_link_libraries(Zip INTERFACE DCPLib::Xml)
+    target_link_libraries(Zip INTERFACE DCPLib::Xml ZIP::ZIP)
     target_link_libraries(Zip INTERFACE zip)
 
     target_include_directories(Zip INTERFACE
