@@ -1,10 +1,16 @@
-//
-// Created by kater on 29.09.17.
-//
+/*
+ * Copyright (C) 2019, FG Simulation und Modellierung, Leibniz Universität Hannover, Germany
+ *
+ * All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the BSD 3-CLause license.  See the LICENSE file for details.
+ */
 
 #ifndef ACOSAR_DRIVERMANAGERSLAVE_H
 #define ACOSAR_DRIVERMANAGERSLAVE_H
 #include <thread>
+#include <mutex>
 
 #include "dcp/logic/AbstractDcpManagerSlave.hpp"
 #include <dcp/model/DcpCallbackTypes.hpp>

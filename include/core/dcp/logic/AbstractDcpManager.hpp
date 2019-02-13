@@ -1,8 +1,10 @@
 /*
- * AbstractAciDriverManager.h
+ * Copyright (C) 2019, FG Simulation und Modellierung, Leibniz Universität Hannover, Germany
  *
- *  Created on: 19.02.2017
- *      Author: kater
+ * All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the BSD 3-CLause license.  See the LICENSE file for details.
  */
 
 #ifndef ACI_DRIVER_ABSTRACTACIDRIVERMANAGER_H_

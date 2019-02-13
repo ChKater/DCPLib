@@ -1,12 +1,16 @@
-//
-// Created by Christian Kater on 18.12.18.
-//
+/*
+ * Copyright (C) 2019, FG Simulation und Modellierung, Leibniz Universität Hannover, Germany
+ *
+ * All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the BSD 3-CLause license.  See the LICENSE file for details.
+ */
 
 #ifndef DCPLIB_LOGHELPER_HPP
 #define DCPLIB_LOGHELPER_HPP
 
 #include <typeinfo>
-#include <cxxabi.h>
 #include <iomanip>
 #include <chrono>
 #include <algorithm>
@@ -22,17 +26,32 @@
 #include <dcp/model/constant/DcpTransportProtocol.hpp>
 #include <dcp/model/LogTemplate.hpp>
 
+
+#ifdef __GNUG__ // gnu C++ compiler
+
+#include <cxxabi.h>
+
+std::string demangle(const char* mangled_name) {
+
+	std::size_t len = 0;
+	int status = 0;
+	std::unique_ptr< char, decltype(&std::free) > ptr(
+		__cxxabiv1::__cxa_demangle(mangled_name, nullptr, &len, &status), &std::free);
+	return ptr.get();
+}
+
+#else
+
+std::string demangle(const char* name) { return name; }
+
+#endif // _GNUG_
+
 template<typename T>
 std::string type_name()
 {
-    int status;
     std::string tname = typeid(T).name();
-    char *demangled_name = abi::__cxa_demangle(tname.c_str(), NULL, NULL, &status);
-    if(status == 0) {
-        tname = demangled_name;
-        std::free(demangled_name);
-    }
-    return tname;
+  
+    return demangle(tname.c_str());
 }
 
 template<typename T>

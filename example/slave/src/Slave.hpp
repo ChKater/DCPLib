@@ -82,8 +82,7 @@ public:
         SlaveDescription_t slaveDescription = make_SlaveDescription(1, 0, "dcpslave", "b5279485-720d-4542-9f29-bee4d9a75ef9");
         slaveDescription.OpMode.SoftRealTime = make_SoftRealTime_ptr();
         Resolution_t resolution = make_Resolution();
-        resolution.numerator = 1;
-        resolution.denominator = 100;
+        resolution.numerator = 1000;
         slaveDescription.TimeRes.resolutions.push_back(resolution);
         slaveDescription.TransportProtocols.UDP_IPv4 = make_UDP_ptr();
         slaveDescription.TransportProtocols.UDP_IPv4->Control =

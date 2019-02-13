@@ -1,6 +1,11 @@
-//
-// Created by Christian Kater on 29.11.18.
-//
+/*
+ * Copyright (C) 2019, FG Simulation und Modellierung, Leibniz Universität Hannover, Germany
+ *
+ * All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the BSD 3-CLause license.  See the LICENSE file for details.
+ */
 
 #ifndef DCPLIB_XSD_HPP
 #define DCPLIB_XSD_HPP
@@ -1141,6 +1146,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
                                         <xs:complexContent>
                                             <xs:extension base="dcpInteger64Type">
                                                 <xs:attribute name="start">
+)delimiter"
+R"delimiter(
                                                   <xs:simpleType>
                                                   <xs:list itemType="xs:long"/>
                                                   </xs:simpleType>
@@ -1398,6 +1405,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
                                                 <xs:attribute name="start" use="required">
                                                   <xs:simpleType>
                                                   <xs:list itemType="xs:unsignedLong"/>
+)delimiter"
+R"delimiter(
                                                   </xs:simpleType>
                                                 </xs:attribute>
                                             </xs:extension>

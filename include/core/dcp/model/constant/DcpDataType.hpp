@@ -1,6 +1,11 @@
-//
-// Created by Christian Kater on 11.01.19.
-//
+/*
+ * Copyright (C) 2019, FG Simulation und Modellierung, Leibniz Universität Hannover, Germany
+ *
+ * All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the BSD 3-CLause license.  See the LICENSE file for details.
+ */
 
 #ifndef DCPLIB_DCPDATATYPE_HPP
 #define DCPLIB_DCPDATATYPE_HPP
@@ -112,22 +117,7 @@ static std::ostream &operator<<(std::ostream &os, DcpDataType type) {
             return os << "string";
         case DcpDataType::binary:
             return os << "binary";
-        /* For logging purpose*/
         case DcpDataType::state:
-            return os << "uint8";
-        case DcpDataType::opMode:
-            return os << "uint8";
-        case DcpDataType::dataType:
-            return os << "uint8";
-        case DcpDataType::error:
-            return os << "uint16";
-        case DcpDataType::scope:
-            return os << "uint8";
-        case DcpDataType::logMode:
-            return os << "uint8";
-        case DcpDataType::logLevel:
-            return os << "uint8";
-        case DcpDataType::pduType:
             return os << "uint8";
         default:
             return os << "UNKNOWN(" << (unsigned((uint8_t) type)) << ")";

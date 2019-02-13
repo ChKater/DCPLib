@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <fstream>
 
-#include <dcp/model/pdu/DcpPduFactory.hpp>
+#include <dcp/model/DcpPdu.hpp>
 #include <dcp/xml/DcpSlaveDescriptionReader.hpp>
 #include <dcp/driver/ethernet/udp/UdpDriver.hpp>
 #include <dcp/logic/DcpManagerMaster.hpp>
@@ -74,7 +74,7 @@ private:
         std::cout << "Configure Slaves" << std::endl;
         receivedAcks[1] = 0;
 
-        manager->CFG_scope(1, 1, DcpScope::Initialization_Run_NonRealTime);
+        manager->CFG_scope(1, 1, DcpScope::CONFIGURED_INITIALIZING_INITIALIZED_RUNNING);
 
         manager->CFG_input(1, 1, 0, slaveDescription->Variables.at(1).valueReference, DcpDataType::float64);
         manager->CFG_output(1, 1, 0, slaveDescription->Variables.at(0).valueReference);

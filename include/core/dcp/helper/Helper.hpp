@@ -1,6 +1,11 @@
-//
-// Created by kater on 06.09.17.
-//
+/*
+ * Copyright (C) 2019, FG Simulation und Modellierung, Leibniz Universität Hannover, Germany
+ *
+ * All rights reserved.
+ *
+ * This software may be modified and distributed under the terms
+ * of the BSD 3-CLause license.  See the LICENSE file for details.
+ */
 
 #ifndef PROJECT_HELPER_H_H
 #define PROJECT_HELPER_H_H
