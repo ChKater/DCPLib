@@ -46,8 +46,10 @@ static std::ostream &operator<<(std::ostream &os, DcpLogLevel level) {
             return os << "INFO";
         case DcpLogLevel::LVL_DEBUG:
             return os << "DEBUG";
+        default:
+            return os << "UNKNOWN(" << (unsigned((uint8_t) level)) << ")";
     }
-    return os;
+    return os << "UNKNOWN";
 }
 
 static std::string to_string(DcpLogLevel level) {

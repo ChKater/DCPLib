@@ -145,10 +145,6 @@ if(BUILD_ALL OR BUILD_XML)
     target_link_libraries(Xml INTERFACE DCPLib::Core)
     target_link_libraries(Xml INTERFACE XercesC::XercesC)
 
-    if(WIN32)
-        target_link_libraries(Xml INTERFACE wsock32 ws2_32)
-    endif()
-
     target_include_directories(Xml INTERFACE
             $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/xml>
             $<INSTALL_INTERFACE:include/DCPLib/xml>

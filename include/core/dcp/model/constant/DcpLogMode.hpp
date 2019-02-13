@@ -29,10 +29,14 @@ enum class DcpLogMode : uint8_t {
 #if defined(DEBUG) || defined(LOGGING)
 static std::ostream &operator<<(std::ostream &os, DcpLogMode logMode) {
     switch (logMode) {
+        case DcpLogMode::NO_LOGGING:
+            return os << "NO_LOGGING";
         case DcpLogMode::LOG_ON_REQUEST:
             return os << "LOG_ON_REQUEST";
         case DcpLogMode::LOG_ON_NOTIFICATION:
             return os << "LOG_ON_NOTIFICATION";
+        default:
+            return os << "UNKNOWN(" << (unsigned((uint8_t) logMode)) << ")";
     }
     return os;
 }

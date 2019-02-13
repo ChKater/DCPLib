@@ -62,7 +62,7 @@ public:
         os << " parameter_vr=" << getParameterVr();
         os << " source_data_type=" << getSourceDataType();
         os << " configuration=";
-        for (size_t i = 13; i < stream_size; ++i)
+        for (size_t i = 13 + PDU_LENGTH_INDICATOR_SIZE; i < stream_size; ++i)
             os << std::hex << std::setw(2) << std::setfill('0')
                << (int) stream[i] << " ";
 
@@ -74,7 +74,7 @@ public:
       * @return tream_size is at least as much as the in the standard defined fixed part of an PARAM PDU
       */
     virtual bool isSizeCorrect() {
-        return this->stream_size >= 13;
+        return this->stream_size - PDU_LENGTH_INDICATOR_SIZE >= 13;
     }
 
     /**

@@ -8,6 +8,8 @@
 #include <typeinfo>
 #include <cxxabi.h>
 #include <iomanip>
+#include <chrono>
+#include <algorithm>
 
 #include <dcp/model/constant/DcpDataType.hpp>
 #include <dcp/model/constant/DcpPduType.hpp>
@@ -58,21 +60,23 @@ static DcpDataType getFixedSizeDcpDataType() {
     } else if (std::is_same<DcpLogLevel , T>::value) {
         return DcpDataType::uint8;
     } else if (std::is_same<DcpPduType , T>::value) {
-        return DcpDataType::uint8;
+        return DcpDataType::pduType;
     } else if (std::is_same<DcpState , T>::value) {
         return DcpDataType::state;
     }else if (std::is_same<DcpOpMode , T>::value) {
-        return DcpDataType::uint8;
+        return DcpDataType::opMode;
     }else if (std::is_same<DcpDataType , T>::value) {
-        return DcpDataType::uint8;
+        return DcpDataType::dataType;
     }else if (std::is_same<DcpError , T>::value) {
-        return DcpDataType::uint16;
+        return DcpDataType::error;
     }else if (std::is_same<DcpScope, T>::value) {
-        return DcpDataType::uint8;
+        return DcpDataType::scope;
     }else if (std::is_same<DcpTransportProtocol , T>::value) {
-        return DcpDataType::uint8;
+        return DcpDataType::transportProtocol;
     }else if (std::is_same<DcpLogMode, T>::value) {
-        return DcpDataType::uint8;
+        return DcpDataType::logMode;
+    } else if (std::is_same<DcpLogLevel , T>::value) {
+        return DcpDataType::logLevel;
     }
     throw std::invalid_argument(type_name<T>() + " is not an fixed size DcpDataType");
     return DcpDataType::uint8;

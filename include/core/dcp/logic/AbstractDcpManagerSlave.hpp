@@ -34,7 +34,7 @@
 #include <dcp/model/pdu/DcpPduNtfStateChanged.hpp>
 #include <dcp/model/pdu/DcpPduRspAck.hpp>
 #include <dcp/model/pdu/DcpPduRspLogAck.hpp>
-#include <dcp/model/pdu/DcpPduRspNegative.hpp>
+#include <dcp/model/pdu/DcpPduRspNack.hpp>
 #include <dcp/model/pdu/DcpPduRspStateAck.hpp>
 #include <dcp/model/pdu/DcpPduStc.hpp>
 #include <dcp/model/pdu/DcpPduStcDoStep.hpp>
@@ -50,6 +50,8 @@
 
 #if defined(DEBUG) || defined(LOGGING)
 #include <dcp/logic/DCPSlaveErrorCodes.hpp>
+#include <dcp/model/pdu/DcpPduRspErrorAck.hpp>
+
 #endif
 
 #ifdef ERROR
@@ -91,6 +93,7 @@ public:
         switch (msg.getTypeId()) {
             case DcpPduType::STC_prepare: {
                 state = DcpState::PREPARING;
+                notifyStateChange();
                 driver.prepare();
                 prepare();
                 break;
@@ -174,7 +177,7 @@ public:
             case DcpPduType::INF_error: {
                 DcpPduBasic &basic = static_cast<DcpPduBasic &>(msg);
 
-                DcpPduRspNegative errorAck = {DcpPduType::RSP_error_ack,
+                DcpPduRspErrorAck errorAck = {DcpPduType::RSP_error_ack,
                                        state == DcpState::ALIVE ? basic.getReceiver() : dcpId,
                                        basic.getPduSeqId(), errorCode};
                 driver.send(errorAck);
@@ -219,6 +222,15 @@ public:
                 inputAssignment[inputConfig.getDataId()][inputConfig.getPos()] = std::make_pair(
                         inputConfig.getTargetVr(),
                         inputConfig.getSourceDataType());
+                std::shared_ptr<uint32_t> maxConsecMissedPdus = slavedescription::getVariable(slaveDescription,
+                        inputConfig.getTargetVr())->maxConsecMissedPdus;
+                if(maxConsecMissedPdus != nullptr){
+                    if(maxConsecMissedPduData[inputConfig.getDataId()] == 0 ||
+                    *maxConsecMissedPdus < maxConsecMissedPduData[inputConfig.getDataId()]){
+                        maxConsecMissedPduData[inputConfig.getDataId()] = *maxConsecMissedPdus;
+                    }
+                }
+
 
 #ifdef DEBUG
                 Log(NEW_INPUT_CONFIG, inputConfig.getTargetVr(), inputConfig.getSourceDataType(),
@@ -249,9 +261,9 @@ public:
             }
             case DcpPduType::CFG_clear: {
                 clearConfig();
-                segNumsIn[masterId] = seqAtRegister + 1;
+                segNumsIn[masterId] = seqAtRegister;
 #ifdef DEBUG
-                Log(NEXT_SEQUENCE_ID_FROM_MASTER, segNumsIn[masterId]);
+                Log(NEXT_SEQUENCE_ID_FROM_MASTER, (uint16_t) (segNumsIn[masterId] + 1));
 #endif
                 break;
             }
@@ -367,6 +379,14 @@ public:
                 paramAssignment[paramConfig.getParamId()][paramConfig.getPos()] = std::make_pair(
                         paramConfig.getParameterVr(),
                         paramConfig.getSourceDataType());
+                std::shared_ptr<uint32_t> maxConsecMissedPdus = slavedescription::getVariable(slaveDescription,
+                        paramConfig.getParameterVr())->maxConsecMissedPdus;
+                if(maxConsecMissedPdus != nullptr){
+                    if(maxConsecMissedPduData[paramConfig.getParamId()] == 0 ||
+                       *maxConsecMissedPdus <  maxConsecMissedPduData[paramConfig.getParamId()]){
+                        maxConsecMissedPduData[paramConfig.getParamId()] = *maxConsecMissedPdus;
+                    }
+                }
 #ifdef DEBUG
                 Log(NEW_TUNABLE_CONFIG, paramConfig.getParameterVr(), paramConfig.getSourceDataType(),
                     paramConfig.getParamId());
@@ -570,7 +590,6 @@ protected:
     /*Data Handling*/
     std::map<valueReference_t, MultiDimValue *> values;
 
-
     std::set<dataId_t> sourceNetworkConfigured;
     std::set<dataId_t> targetNetworkConfigured;
     std::set<paramId_t> paramNetworkConfigured;
@@ -592,9 +611,14 @@ protected:
     std::map<dataId_t, std::map<pos_t, std::pair<valueReference_t, DcpDataType>>> inputAssignment;
     std::map<dataId_t, std::vector<pos_t>> configuredInPos;
 
+    std::map<dataId_t, uint16_t> maxConsecMissedPduData;
+
     //Parameter
     std::map<paramId_t, std::vector<pos_t>> configuredParamPos;
     std::map<paramId_t, std::map<pos_t, std::pair<valueReference_t, DcpDataType>>> paramAssignment;
+
+    std::map<dataId_t, uint16_t> maxConsecMissedPduParam;
+
 
     //which sttructual parameter (valueReference) change which inputs/outputs/parameters (valueReference)
     std::map<valueReference_t, std::vector<std::pair<valueReference_t, size_t>>> structualDependencies;
@@ -731,6 +755,7 @@ protected:
         stateChangePossible[DcpState::ERROR_HANDLING][DcpPduType::DAT_parameter] = true;
 
         stateChangePossible[DcpState::ERROR_RESOLVED][DcpPduType::STC_reset] = true;
+        stateChangePossible[DcpState::ERROR_RESOLVED][DcpPduType::STC_deregister] = true;
         stateChangePossible[DcpState::ERROR_RESOLVED][DcpPduType::INF_state] = true;
         stateChangePossible[DcpState::ERROR_RESOLVED][DcpPduType::INF_error] = true;
         stateChangePossible[DcpState::ERROR_RESOLVED][DcpPduType::INF_log] = true;
@@ -1341,7 +1366,8 @@ protected:
     }
 
     void nack(uint16_t respSeqId, DcpError errorCode) {
-        DcpPduRspNegative nack = {DcpPduType::RSP_nack, dcpId, respSeqId, errorCode};
+        const uint16_t expSeqId = segNumsIn[masterId] + 1;
+        DcpPduRspNack nack = {DcpPduType::RSP_nack, dcpId, respSeqId, expSeqId, errorCode};
         driver.send(nack);
     }
 
@@ -1402,27 +1428,32 @@ protected:
         }
 
         //check sequence id
-        /*switch (msg.getTypeId()) {
+        switch (msg.getTypeId()) {
             case DcpPduType::DAT_input_output: {
-                DcpPduDatInputOutput &aciPduData = static_cast<DcpPduDatInputOutput &>(msg);
-                uint16_t diff = checkSeqIdInOut(aciPduData.getDataId(), aciPduData.getPduSeqId());
-                if (diff > 1) {
-                    //inputOutputPduMissed(aciPduData.getDataId());
-                    //Log(IN_OUT_PDU_MISSED);
-                } else if (diff <= 0) {
-                    Log(OLD_IN_OUT_PDU_RECEIVED);
+                DcpPduDatInputOutput &dcpPduDatInputOutput = static_cast<DcpPduDatInputOutput &>(msg);
+                uint16_t diff = checkSeqIdInOut(dcpPduDatInputOutput.getDataId(), dcpPduDatInputOutput.getPduSeqId());
+                if (diff != 1) {
+                    notifyMissingInputOutputPduListener(dcpPduDatInputOutput.getDataId());
+                    Log(IN_OUT_PDU_MISSED);
+                }
+                if(maxConsecMissedPduData[dcpPduDatInputOutput.getDataId()] > 0 && maxConsecMissedPduData[dcpPduDatInputOutput.getDataId()] < diff){
+                    gotoErrorHandling();
+                    gotoErrorResolved();
                     return false;
                 }
                 break;
+
             }
             case DcpPduType::DAT_parameter: {
-                DcpPduDatParameter &aciPduParam = static_cast<DcpPduDatParameter &>(msg);
-                uint16_t diff = checkSeqIdParam(aciPduParam.getParamId(), aciPduParam.getPduSeqId());
-                if (diff > 1) {
-                    parameterPduMissed(aciPduParam.getParamId());
+                DcpPduDatParameter dcpPduDatParameter = static_cast<DcpPduDatParameter &>(msg);
+                uint16_t diff = checkSeqIdParam(dcpPduDatParameter.getParamId(), dcpPduDatParameter.getPduSeqId());
+                if (diff != 1) {
+                    notifyMissingParameterPduListener(dcpPduDatParameter.getParamId());
                     Log(PARAM_PDU_MISSED);
-                } else if (diff <= 0) {
-                    Log(OLD_PARAM_PDU_RECEIVED);
+                }
+                if(maxConsecMissedPduParam[dcpPduDatParameter.getParamId()] > 0 && maxConsecMissedPduParam[dcpPduDatParameter.getParamId()] < diff){
+                    gotoErrorHandling();
+                    gotoErrorResolved();
                     return false;
                 }
                 break;
@@ -1431,26 +1462,26 @@ protected:
                 if (state != DcpState::ALIVE) {
                     DcpPduBasic &basicPdu = static_cast<DcpPduBasic &>(msg);
                     uint16_t diff = checkSeqId(masterId, basicPdu.getPduSeqId());
-                    if (diff > 1) {
-                        controlPduMissed();
+                    if (diff != 1) {
+                        error = DcpError::INVALID_SEQUENCE_ID;
+                        notifyMissingControlPduListener();
                         Log(CTRL_PDU_MISSED);
-                    } else if (diff <= 0) {
-                        Log(OLD_CTRL_PDU_RECEIVED);
-                        return false;
                     }
                 }
                 break;
             }
-        }*/
+        }
 
-        //check support
-        if (opMode != DcpOpMode::NRT) {
-            switch (msg.getTypeId()) {
-                case DcpPduType::STC_do_step:
+        if(error == DcpError::NONE){
+            //check support
+            if (opMode != DcpOpMode::NRT) {
+                switch (msg.getTypeId()) {
+                    case DcpPduType::STC_do_step:
 #if defined(DEBUG) || defined(LOGGING)
-                    Log(ONLY_NRT, opMode);
+                        Log(ONLY_NRT, opMode);
 #endif
-                    error = DcpError::NOT_SUPPORTED_PDU;
+                        error = DcpError::NOT_SUPPORTED_PDU;
+                }
             }
         }
 
@@ -1528,7 +1559,7 @@ protected:
                         default:
                             correctLength = getDcpDataTypeSize(setParameter.getSourceDataType());
                     }
-                    if (setParameter.getSerializedSize() != (correctLength + 13)) {
+                    if (setParameter.getPduSize() != (correctLength + 13)) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_LENGTH, (uint16_t) setParameter.getPduSize(),
                             (uint16_t) (correctLength + 13));
@@ -1587,8 +1618,9 @@ protected:
 #if defined(DEBUG) || defined(LOGGING)
                         Log(INVALID_STATE_ID, registerPdu.getStateId(), state);
 #endif
-                        DcpPduRspNegative nack = {DcpPduType::RSP_nack, registerPdu.getReceiver(), registerPdu.getPduSeqId(),
-                                           DcpError::INVALID_STATE_ID};
+                        const uint16_t exp_seq_id = registerPdu.getPduSeqId() + 1;
+                        DcpPduRspNack nack = {DcpPduType::RSP_nack, registerPdu.getReceiver(), registerPdu.getPduSeqId(),
+                                           exp_seq_id, DcpError::INVALID_STATE_ID};
                         driver.send(nack);
                         return false;
                     }
@@ -1663,14 +1695,15 @@ protected:
                         return true;
                     } else {
                         std::cout << registerPdu.getReceiver() << std::endl;
-                        DcpPduRspNegative nack = {DcpPduType::RSP_nack, registerPdu.getReceiver(), registerPdu.getPduSeqId(),
-                                           error};
+                        const uint16_t exp_seq_id = registerPdu.getPduSeqId() + 1;
+                        DcpPduRspNack nack = {DcpPduType::RSP_nack, registerPdu.getReceiver(), registerPdu.getPduSeqId(),
+                                              exp_seq_id, error};
                         driver.send(nack);
                         return false;
                     }
                     break;
                 }
-                case DcpPduType::STC_configure: {
+                case DcpPduType::STC_prepare: {
                     for (auto &in : configuredInPos) {
                         uint16_t maxInPos = *std::max_element(std::begin(in.second), std::end(in.second));
                         if (maxInPos >= in.second.size()) {
@@ -1875,7 +1908,7 @@ protected:
                 case DcpPduType::CFG_time_res: {
                     DcpPduCfgTimeRes &setTimeRes = static_cast<DcpPduCfgTimeRes &>(msg);
                     if (timeResolutionFix &&
-                        !(numerator == setTimeRes.getNumerator() && denominator == setTimeRes.getDenominator())) {
+                        !(numerator * setTimeRes.getDenominator() == setTimeRes.getNumerator() * denominator)) {
 #if defined(DEBUG) || defined(LOGGING)
                         Log(FIX_TIME_RESOLUTION);
 #endif

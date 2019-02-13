@@ -30,7 +30,7 @@
 #include <dcp/model/pdu/DcpPduNtfStateChanged.hpp>
 #include <dcp/model/pdu/DcpPduRspAck.hpp>
 #include <dcp/model/pdu/DcpPduRspLogAck.hpp>
-#include <dcp/model/pdu/DcpPduRspNegative.hpp>
+#include <dcp/model/pdu/DcpPduRspNack.hpp>
 #include <dcp/model/pdu/DcpPduRspStateAck.hpp>
 #include <dcp/model/pdu/DcpPduStc.hpp>
 #include <dcp/model/pdu/DcpPduStcDoStep.hpp>
@@ -71,9 +71,53 @@ public:
     virtual ~DcpManagerMaster() {}
 
     virtual void receive(DcpPdu &msg) override {
+        //check sequence id
+        switch(msg.getTypeId()){
+            case DcpPduType::RSP_ack:
+            case DcpPduType::RSP_nack:
+            case DcpPduType::RSP_state_ack:
+            case DcpPduType::RSP_error_ack:
+            case DcpPduType::RSP_log_ack:{
+                DcpPduRspAck &pdu = static_cast<DcpPduRspAck &>(msg);
+                if(checkSeqId(pdu.getSender(), pdu.getRespSeqId()) != 1){
+                    if (synchronousCallback[DcpCallbackTypes::PDU_MISSED]) {
+                        pduMissedListener(pdu.getSender());
+                    } else {
+                        std::thread t(pduMissedListener, pdu.getSender());
+                        t.detach();
+                    }
+                }
+                break;
+            }
+            case DcpPduType::DAT_input_output:{
+                DcpPduDatInputOutput &data = static_cast<DcpPduDatInputOutput &>(msg);
+                if(checkSeqIdInOut(data.getDataId(), data.getPduSeqId()) != 1){
+                    if (synchronousCallback[DcpCallbackTypes::PDU_MISSED]) {
+                        inputOutputPduMissedListener(data.getDataId());
+                    } else {
+                        std::thread t(inputOutputPduMissedListener, data.getDataId());
+                        t.detach();
+                    }
+                }
+                break;
+            }
+        }
+
         switch (msg.getTypeId()) {
             case DcpPduType::RSP_ack: {
+
                 DcpPduRspAck &ack = static_cast<DcpPduRspAck &>(msg);
+                if(lastRegisterSeq[ack.getSender()] == ack.getRespSeqId()){
+                    lastRegisterSuccessfullSeq[ack.getSender()] = ack.getRespSeqId();
+                }
+                if(lastClearSeq[ack.getSender()] == ack.getRespSeqId()){
+                    segNumsOut[ack.getSender()] = lastRegisterSuccessfullSeq[ack.getSender()] + 1;
+                    segNumsIn[ack.getSender()] = lastRegisterSuccessfullSeq[ack.getSender()] + 1;
+                    dataSegNumsOut[ack.getSender()] = 0;
+                    dataSegNumsIn[ack.getSender()] = 0;
+                    lastRegisterSeq[ack.getSender()] = 0;
+                    lastClearSeq[ack.getSender()] = 0;
+                }
                 if (synchronousCallback[DcpCallbackTypes::ACK]) {
                     ackReceivedListener(ack.getSender(), ack.getRespSeqId());
                 } else {
@@ -83,7 +127,7 @@ public:
                 break;
             }
             case DcpPduType::RSP_nack: {
-                DcpPduRspNegative &nack = static_cast<DcpPduRspNegative &>(msg);
+                DcpPduRspNack &nack = static_cast<DcpPduRspNack &>(msg);
                 if (synchronousCallback[DcpCallbackTypes::NACK]) {
                     nAckReceivedListener(nack.getSender(), nack.getRespSeqId(),
                                          nack.getErrorCode());
@@ -107,7 +151,7 @@ public:
                 break;
             }
             case DcpPduType::RSP_error_ack: {
-                DcpPduRspNegative &errorAck = static_cast<DcpPduRspNegative &>(msg);
+                DcpPduRspNack &errorAck = static_cast<DcpPduRspNack &>(msg);
                 DcpPduRspStateAck &stateAck = static_cast<DcpPduRspStateAck &>(msg);
                 if (synchronousCallback[DcpCallbackTypes::NACK]) {
                     errorAckReceivedListener(errorAck.getSender(),
@@ -230,6 +274,7 @@ public:
     void STC_register(const uint8_t dcpId, const DcpState stateId, const uint128_t slaveUuid,
                       const DcpOpMode opMode, const uint8_t majorversion, const uint8_t minorVersion) {
         DcpPduStcRegister pdu = {getNextSeqNum(dcpId), dcpId, stateId, slaveUuid, opMode, majorversion, minorVersion};
+        lastRegisterSeq[dcpId] = pdu.getPduSeqId();
         driver.send(pdu);
     }
 
@@ -434,6 +479,7 @@ public:
     void CFG_input(const uint8_t dcpId,
                           const uint16_t dataId, uint16_t pos, const uint64_t targetVr,
                           const DcpDataType sourceDataType) {
+        assert((uint8_t) sourceDataType <= 11);
         DcpPduCfgInput pdu = {getNextSeqNum(dcpId), dcpId, dataId, pos, targetVr, sourceDataType};
         driver.send(pdu);
     }
@@ -462,6 +508,7 @@ public:
     void CFG_clear(const uint8_t dcpId) {
         DcpPduBasic pdu = {DcpPduType::CFG_clear, getNextSeqNum(dcpId),
                            dcpId};
+        lastClearSeq[dcpId] = pdu.getPduSeqId();
         driver.send(pdu);
     }
 
@@ -547,6 +594,7 @@ public:
      */
     void CFG_parameter(const uint8_t dcpId, const uint64_t parameterVr, const DcpDataType sourceDataType,
                            uint8_t *configuration, size_t configurationLength) {
+        assert((uint8_t) sourceDataType <= 11);
         DcpPduCfgParameter setParameter = {getNextSeqNum(dcpId), dcpId, parameterVr, sourceDataType, configuration,
                                            configurationLength};
         driver.send(setParameter);
@@ -565,6 +613,7 @@ public:
     void CFG_tunable_parameter(const uint8_t dcpId,
                                       const uint16_t paramId, uint16_t pos, const uint64_t parameterVr,
                                       const DcpDataType sourceDataType) {
+        assert((uint8_t) sourceDataType <= 11);
         DcpPduCfgTunableParameter configTunableParameter = {getNextSeqNum(dcpId), dcpId, paramId, pos, parameterVr,
                                                                sourceDataType};
         driver.send(configTunableParameter);
@@ -849,6 +898,10 @@ private:
     std::map<uint8_t, std::unique_ptr<std::thread>> heartbeatThreads;
     std::map<uint8_t, std::condition_variable> heartbeatCV;
     std::map<uint8_t, std::mutex> heartbeatMutex;
+
+    std::map<uint8_t, uint16_t> lastRegisterSeq;
+    std::map<uint8_t, uint16_t> lastRegisterSuccessfullSeq;
+    std::map<uint8_t, uint16_t> lastClearSeq;
 
     std::map<DcpCallbackTypes, bool> synchronousCallback;
     std::function<void(uint8_t sender, uint16_t pduSeqId)> ackReceivedListener = [](uint8_t sender,

@@ -23,8 +23,9 @@
 #include <dcp/model/pdu/DcpPduNtfLog.hpp>
 #include <dcp/model/pdu/DcpPduNtfStateChanged.hpp>
 #include <dcp/model/pdu/DcpPduRspAck.hpp>
+#include <dcp/model/pdu/DcpPduRspErrorAck.hpp>
 #include <dcp/model/pdu/DcpPduRspLogAck.hpp>
-#include <dcp/model/pdu/DcpPduRspNegative.hpp>
+#include <dcp/model/pdu/DcpPduRspNack.hpp>
 #include <dcp/model/pdu/DcpPduRspStateAck.hpp>
 #include <dcp/model/pdu/DcpPduStc.hpp>
 #include <dcp/model/pdu/DcpPduStcDoStep.hpp>
@@ -83,9 +84,9 @@ static DcpPdu *makeDcpPdu(unsigned char *stream, size_t stream_size) {
         case DcpPduType::RSP_ack:
             return new DcpPduRspAck(stream, stream_size);
         case DcpPduType::RSP_nack:
-            return new DcpPduRspNegative(stream, stream_size);
+            return new DcpPduRspNack(stream, stream_size);
         case DcpPduType::RSP_error_ack:
-            return new DcpPduRspNegative(stream, stream_size);
+            return new DcpPduRspErrorAck(stream, stream_size);
         case DcpPduType::RSP_state_ack:
             return new DcpPduRspStateAck(stream, stream_size);
         case DcpPduType::RSP_log_ack:
@@ -111,7 +112,7 @@ static DcpPdu *makeDcpPdu(unsigned char *stream, size_t stream_size) {
 
         }
         case DcpPduType::CFG_param_network_information: {
-            DcpTransportProtocol &tp = *((DcpTransportProtocol * )(stream + 4));
+            DcpTransportProtocol &tp = *((DcpTransportProtocol * )(stream + 10));
             switch (tp) {
                 case DcpTransportProtocol::UDP_IPv4:
                     return new DcpPduCfgParamNetworkInformationIPv4(stream, stream_size);

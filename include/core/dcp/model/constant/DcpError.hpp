@@ -118,7 +118,10 @@ enum class DcpError : uint16_t {
      * available within that DCP slave.
      */
     INVALID_VALUE_REFERENCE = 0x2012,
-
+    /**
+     * Violated PDU sequence ID check.
+     */
+    INVALID_SEQUENCE_ID = 0x2013,
     /**
      * There are gaps in the configured PDU Data payload field.
      * Note: No gap means if pos n is not the last pos, there exists a pos n+1.
@@ -199,10 +202,10 @@ enum class DcpError : uint16_t {
 /**
  * Adds an DcpError to an osstream in a human readable format.
  * @param str
- * @param type
+ * @param error
  */
-static std::ostream &operator<<(std::ostream &os, DcpError type) {
-    switch (type) {
+static std::ostream &operator<<(std::ostream &os, DcpError error) {
+    switch (error) {
         case DcpError::NONE:
             return os << "NONE";
         case DcpError::PROTOCOL_ERROR_GENERIC:
@@ -261,6 +264,8 @@ static std::ostream &operator<<(std::ostream &os, DcpError type) {
             return os << "INVALID_UUID";
         case DcpError::INVALID_VALUE_REFERENCE:
             return os << "INVALID_VALUE_REFERENCE";
+        case DcpError::INVALID_SEQUENCE_ID:
+            return os << "INVALID_SEQUENCE_ID";
         case DcpError::NOT_SUPPORTED_LOG_ON_NOTIFICATION:
             return os << "NOT_SUPPORTED_LOG_ON_NOTIFICATION";
         case DcpError::NOT_SUPPORTED_LOG_ON_REQUEST:
@@ -283,6 +288,8 @@ static std::ostream &operator<<(std::ostream &os, DcpError type) {
             return os << "INVALID_SOURCE_DATA_TYPE";
         case DcpError::NOT_SUPPORTED_TRANSPORT_PROTOCOL:
             return os << "NOT_SUPPORTED_TRANSPORT_PROTOCOL";
+        default:
+            return os << "UNKNOWN(" << ((uint16_t) error) << ")";
     }
     return os;
 }

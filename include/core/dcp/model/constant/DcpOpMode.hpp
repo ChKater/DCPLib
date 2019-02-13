@@ -38,16 +38,18 @@ enum class DcpOpMode : uint8_t {
 /**
  * Adds an DcpOpMode to an osstream in a human readable format.
  * @param str
- * @param type
+ * @param opMode
  */
-static std::ostream &operator<<(std::ostream &os, DcpOpMode type) {
-    switch (type) {
+static std::ostream &operator<<(std::ostream &os, DcpOpMode opMode) {
+    switch (opMode) {
         case DcpOpMode::HRT:
             return os << "HRT";
         case DcpOpMode::SRT:
             return os << "SRT";
         case DcpOpMode::NRT:
             return os << "NRT";
+        default:
+            return os << "UNKNOWN(" << (unsigned((uint8_t) opMode)) << ")";
     }
     return os;
 }

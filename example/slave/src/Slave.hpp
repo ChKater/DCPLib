@@ -5,7 +5,7 @@
 #include <dcp/helper/Helper.hpp>
 #include <dcp/log/OstreamLog.hpp>
 #include <dcp/logic/DcpManagerSlave.hpp>
-#include <dcp/model/DcpConstants.hpp>
+#include <dcp/model/pdu/DcpPduFactory.hpp>
 #include <dcp/driver/ethernet/udp/UdpDriver.hpp>
 
 #include <cstdint>
@@ -80,10 +80,10 @@ public:
 
     SlaveDescription_t getSlaveDescription(){
         SlaveDescription_t slaveDescription = make_SlaveDescription(1, 0, "dcpslave", "b5279485-720d-4542-9f29-bee4d9a75ef9");
-        slaveDescription.OpMode.SoftRealTime.set = true;
-        slaveDescription.OpMode.NonRealTime.set = false;
+        slaveDescription.OpMode.SoftRealTime = make_SoftRealTime_ptr();
         Resolution_t resolution = make_Resolution();
-        resolution.numerator = 10;
+        resolution.numerator = 1;
+        resolution.denominator = 100;
         slaveDescription.TimeRes.resolutions.push_back(resolution);
         slaveDescription.TransportProtocols.UDP_IPv4 = make_UDP_ptr();
         slaveDescription.TransportProtocols.UDP_IPv4->Control =
@@ -138,9 +138,9 @@ private:
             {DcpDataType::float64, DcpDataType::uint64, DcpDataType::float64, DcpDataType::float64});
 
     float64_t *a;
-    const uint32_t a_vr = 1;
+    const uint32_t a_vr = 2;
     float64_t *y;
-    const uint32_t y_vr = 2;
+    const uint32_t y_vr = 1;
 
 };
 

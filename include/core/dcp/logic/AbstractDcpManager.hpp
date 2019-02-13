@@ -130,8 +130,8 @@ protected:
 
     uint16_t checkSeqId(const uint8_t acuId, const uint16_t seqId) {
         uint16_t old = segNumsIn[acuId];
-        if (seqId > old) {
-            segNumsIn[acuId] = seqId + 1;
+        if (seqId == old + 1) {
+            segNumsIn[acuId] = seqId;
         }
         return seqId - old;
     }
@@ -140,7 +140,7 @@ protected:
     uint16_t checkSeqIdInOut(const uint16_t dataId, const uint16_t seqId) {
         uint16_t old = dataSegNumsIn[dataId];
         if (seqId > old) {
-            dataSegNumsIn[dataId] = seqId + 1;
+            dataSegNumsIn[dataId] = seqId;
         }
         return seqId - old;
     }

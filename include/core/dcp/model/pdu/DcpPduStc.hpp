@@ -6,6 +6,7 @@
 #define DCPLIB_DCPPDUSTATETRANSITION_HPP
 
 #include <dcp/model/pdu/DcpPduBasic.hpp>
+#include <dcp/model/constant/DcpState.hpp>
 
 /**
  * This class decscribes the structure for the Pdus "STC_initialize", "STC_synchronize",

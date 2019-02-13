@@ -9,8 +9,8 @@
 #include <string>
 #include <regex>
 #include <dcp/helper/Helper.hpp>
+#include <dcp/helper/LogHelper.hpp>
 #include <dcp/model/LogEntry.hpp>
-
 #include <iostream>
 
 class OstreamLog {

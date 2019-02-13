@@ -23,7 +23,7 @@
 #include <fstream>
 
 template<typename T>
-static std::string to_string(std::vector<T>& vector) {
+std::string to_string(std::vector<T>& vector) {
     std::ostringstream oss;
     for(auto& value: vector){
         oss << value << " ";
@@ -32,7 +32,7 @@ static std::string to_string(std::vector<T>& vector) {
 }
 
 template<>
-static std::string to_string<uint8_t>(std::vector<uint8_t>& vector) {
+std::string to_string<uint8_t>(std::vector<uint8_t>& vector) {
     std::ostringstream oss;
     for(auto& value: vector){
         oss << unsigned(value) << " ";

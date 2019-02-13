@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <regex>
 #include <string>
+#include <iomanip>
 #include <sstream>
 #include <dcp/model/LogTemplate.hpp>
 #include <dcp/model/DcpTypes.hpp>

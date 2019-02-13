@@ -246,6 +246,8 @@ static std::ostream &operator<<(std::ostream &os, DcpPduType type) {
             return os << "CFG_source_network_information";
         case DcpPduType::CFG_scope:
             return os << "CFG_scope";
+        default:
+            return os << "UNKNOWN(" << (unsigned((uint8_t) type)) << ")";
     }
     return os;
 }

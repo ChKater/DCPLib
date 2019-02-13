@@ -7,38 +7,50 @@
 
 #include <cstdint>
 #include <string>
+#include <math.h>
 
 
 class DcpString {
 public:
 
     DcpString(uint32_t maxSize){
-        payload = new char[maxSize];
-        *((uint16_t*) payload) = 0;
+        payload = new char[maxSize + 4];
+        *((uint32_t*) payload) = 0;
+        managed = true;
     }
 
     DcpString(std::string& str, uint32_t maxSize){
         payload = new char[maxSize + 4];
         setString(str);
+        managed = true;
     }
 
-    ~DcpString(){}
+    DcpString(char* payload){
+        this->payload = payload;
+        managed = false;
+    }
+
+    ~DcpString(){
+        if(managed){
+            delete[] payload;
+        }
+    }
 
     const char* getChar() const{
-        return payload + 2;
+        return payload + 4;
     }
 
     const void setString(std::string& str){
-        //todo check if length > max(uint16)
-        *((uint16_t*) payload) = str.size();
-        strcpy(payload + 2, str.c_str());
+        assert(str.size() < pow(2, 32));
+        *((uint32_t*) payload) = str.size();
+        strcpy(payload + 4, str.c_str());
     }
 
     const std::string getString() const {
-        return std::string(payload + 2, getSize());
+        return std::string(payload + 4, getSize());
     }
 
-    const uint16_t getSize() const{
+    const uint32_t getSize() const{
         return *((uint16_t*) payload);
     }
 
@@ -48,6 +60,7 @@ public:
 
 private:
     char* payload;
+    bool managed;
 };
 
 

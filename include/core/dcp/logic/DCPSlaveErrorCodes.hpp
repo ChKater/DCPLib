@@ -67,20 +67,20 @@ static const LogTemplate NEXT_SEQUENCE_ID_FROM_MASTER = LogTemplate(logId++, Log
                                                              {DcpDataType::uint16});
 static const LogTemplate NEW_INPUT_CONFIG = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
                                                  "Added input configuration for value reference %uint64 with source datatype %uint8 to data_id %uint16",
-                                                 {DcpDataType::uint64, DcpDataType::uint8, DcpDataType::uint16});
+                                                 {DcpDataType::uint64, DcpDataType::dataType, DcpDataType::uint16});
 static const LogTemplate NEW_OUTPUT_CONFIG = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
                                                   "Added output configuration for value reference %uint64 to data_id %uint16",
                                                   {DcpDataType::uint64, DcpDataType::uint16});
 static const LogTemplate NEW_TUNABLE_CONFIG = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
                                                    "Added tunable parameter configuration for value reference %uint64 with source datatype %uint8 to data_id %uint16",
-                                                   {DcpDataType::uint64, DcpDataType::uint8, DcpDataType::uint16});
+                                                   {DcpDataType::uint64, DcpDataType::dataType, DcpDataType::uint16});
 static const LogTemplate STEP_SIZE_NOT_SET = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                  "Step size was not set for data id %uin16.",
+                                                  "Step size was not set for data id %uint16.",
                                                   {DcpDataType::uint16});
 static const LogTemplate ASSIGNED_INPUT = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
                                                "Assigned input value for value reference %uint64 (%uint8 -> %uint8):",
-                                               {DcpDataType::uint64, DcpDataType::uint8,
-                                                DcpDataType::uint8});
+                                               {DcpDataType::uint64, DcpDataType::dataType,
+                                                DcpDataType::dataType});
 static const LogTemplate NOT_SUPPORTED_RSP_ACK = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                                       "It is not supported to receive RSP_ack as slave.", {});
 static const LogTemplate NOT_SUPPORTED_RSP_NACK = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
@@ -104,7 +104,7 @@ static const LogTemplate NOT_SUPPORTED_LOG_ON_NOTIFICATION = LogTemplate(logId++
 
 static const LogTemplate INVALID_TYPE_ID = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                                 "A PDU with invalid type id (%uint8) received. PDU will be dropped.",
-                                                {DcpDataType::uint8});
+                                                {DcpDataType::pduType});
 static const LogTemplate INVALID_RECEIVER = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                                  "A PDU with invalid receiver (%uint8) received. PDU will be dropped.",
                                                  {DcpDataType::uint8});
@@ -133,15 +133,15 @@ static const LogTemplate INVALID_LENGTH = LogTemplate(logId++, LogCategory::DCP_
                                                {DcpDataType::uint16, DcpDataType::uint16});
 static const LogTemplate ONLY_NRT = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                          "The received PDU is only allowed in NRT. Current op mode is %uint8.",
-                                         {DcpDataType::uint8});
+                                         {DcpDataType::opMode});
 static const LogTemplate MSG_NOT_ALLOWED = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                                 "It is not allowed to receive %uint8 in state %uint8.",
-                                                {DcpDataType::uint8, DcpDataType::uint8});
+                                                {DcpDataType::pduType, DcpDataType::state});
 static const LogTemplate INVALID_UUID = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                              "UUID does not match %string (slave) != %string (received).",
                                              {DcpDataType::string, DcpDataType::string});
 static const LogTemplate INVALID_OP_MODE = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                "Operation Mode %uint8 is not supported.", {DcpDataType::uint8});
+                                                "Operation Mode %uint8 is not supported.", {DcpDataType::opMode});
 static const LogTemplate INVALID_MAJOR_VERSION = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                                       "The requested major version (%uint8) is not supported by this slave (DCP %uint8.%uint8)",
                                                       {DcpDataType::uint8, DcpDataType::uint8, DcpDataType::uint8});
@@ -189,7 +189,7 @@ static const LogTemplate INCOMPLETE_CONFIG_SCOPE = LogTemplate(logId++, LogCateg
 
 static const LogTemplate DATA_NOT_ALLOWED = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                                  "It is not allowed to receive Data PDUs in state %uint8. PDU will be dropped.",
-                                                 {DcpDataType::uint8});
+                                                 {DcpDataType::state});
 
 static const LogTemplate START_TIME = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                            "Simulation starts at %string.", {DcpDataType::string});
@@ -228,24 +228,24 @@ static const LogTemplate INVALID_STEPS_OUTPUT = LogTemplate(logId++, LogCategory
                                                       DcpDataType::string});
 static const LogTemplate INVALID_VALUE_REFERENCE_INPUT = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE,
                                                               DcpLogLevel::LVL_ERROR,
-                                                              "Value reference %uint64 is not part of the ACU or not a input.",
+                                                              "Value reference %uint64 is not part of the DCP slave or not a input.",
                                                               {DcpDataType::uint64});
 static const LogTemplate INVALID_VALUE_REFERENCE_OUTPUT = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE,
                                                                DcpLogLevel::LVL_ERROR,
-                                                               "Value reference %uint64 is not part of the ACU or not a output.",
+                                                               "Value reference %uint64 is not part of the DCP slave or not a output.",
                                                                {DcpDataType::uint64});
 static const LogTemplate INVALID_VALUE_REFERENCE_PARAMETER = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE,
                                                                   DcpLogLevel::LVL_ERROR,
-                                                                  "Value reference %uint64 is not part of the ACU or not a parameter.",
+                                                                  "Value reference %uint64 is not part of the DCP slave or not a parameter.",
                                                                   {DcpDataType::uint64});
 static const LogTemplate INVALID_SOURCE_DATA_TYPE = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                                          "A PDU with invalid source datatype received. %uint8 (recieved) is not compatible to %uint8 (slave).",
-                                                         {DcpDataType::uint8, DcpDataType::uint8});
+                                                         {DcpDataType::dataType, DcpDataType::dataType});
 static const LogTemplate INVALID_PORT = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                              "Port %uint16 is not supported. It is expected to be %string.",
                                              {DcpDataType::uint16, DcpDataType::string});
 static const LogTemplate INVALID_TRANSPORT_PROTOCOL = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
-                                                           "No %uint8 interface STC_configure..",
+                                                           "%uint8 is not a valid transport protocol.",
                                                            {DcpDataType::uint8});
 static const LogTemplate CONFIGURATION_CLEARED = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
                                                       "Configuration cleared.", {});
@@ -258,8 +258,8 @@ static const LogTemplate STEP_SET = LogTemplate(logId++, LogCategory::DCP_LIB_SL
 static const LogTemplate DCP_ID_SET = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
                                            "DCP id is set to %uint8.", {DcpDataType::uint8});
 static const LogTemplate OP_MODE_SET = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_DEBUG,
-                                            "Operation mode is set to %uint8.", {DcpDataType::uint8});
+                                            "Operation mode is set to %uint8.", {DcpDataType::opMode});
 static const LogTemplate INVALID_STATE_ID = LogTemplate(logId++, LogCategory::DCP_LIB_SLAVE, DcpLogLevel::LVL_ERROR,
                                                  "State id (%uint8) in received state change PDU do not match current state (%uint8).",
-                                                 {DcpDataType::uint8, DcpDataType::uint8});
+                                                 {DcpDataType::state, DcpDataType::state});
 #endif //DCPLIB_DCPSLAVEERRORCODES_HPP

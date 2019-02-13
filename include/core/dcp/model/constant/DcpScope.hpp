@@ -37,6 +37,8 @@ static std::ostream &operator<<(std::ostream &os, DcpScope scope) {
             return os << "Initialization";
         case DcpScope::Run_NonRealTime:
             return os << "Run/NonRealTime";
+        default:
+            return os << "UNKNOWN(" << (unsigned((uint8_t) scope)) << ")";
     }
     return os;
 }

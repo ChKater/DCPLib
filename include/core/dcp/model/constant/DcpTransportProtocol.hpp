@@ -41,10 +41,10 @@ enum class DcpTransportProtocol : uint8_t {
 /**
  * Adds an DcpTransportProtocol to an osstream in a human readable format.
  * @param str
- * @param type
+ * @param transportProtocol
  */
-static std::ostream &operator<<(std::ostream &os, DcpTransportProtocol type) {
-    switch (type) {
+static std::ostream &operator<<(std::ostream &os, DcpTransportProtocol transportProtocol) {
+    switch (transportProtocol) {
         case DcpTransportProtocol::UDP_IPv4:
             return os << "UDP_IPv4";
         case DcpTransportProtocol::CAN_BASED:
@@ -55,6 +55,8 @@ static std::ostream &operator<<(std::ostream &os, DcpTransportProtocol type) {
             return os << "USB";
         case DcpTransportProtocol::TCP_IPv4:
             return os << "TCP_IPv4";
+        default:
+            return os << "UNKNOWN(" << (unsigned((uint8_t) transportProtocol)) << ")";
     }
     return os;
 }

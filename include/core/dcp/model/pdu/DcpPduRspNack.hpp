@@ -10,32 +10,44 @@
 /**
  * This class decscribes the structure for the Pdus "RSP_nack" & "RSP_error_ack".
  */
-class DcpPduRspNegative : public DcpPduRspAck {
+class DcpPduRspNack : public DcpPduRspAck {
 public:
+
+
+    /**
+     * Get the expected next sequence id.
+     *@return the exp_seq_id.
+     */
+    GET_FUN(getExpSeqId, uint16_t, 4)
 
     /**
      * Get the error_code.
      *@return the error code.
      */
-    GET_FUN(getErrorCode, DcpError, 4)
+    GET_FUN(getErrorCode, DcpError, 6)
+
+
 
     /**
     /* Creates a DcpPduRspNegative from existing byte array.
     /* stream byte array containg pdu data. Will not be deleted on DcpPdu destructor.
     /* stream_size number of bytes in stream.
     */
-    DcpPduRspNegative(unsigned char *stream, size_t stream_size) : DcpPduRspAck(stream, stream_size){}
+    DcpPduRspNack(unsigned char *stream, size_t stream_size) : DcpPduRspAck(stream, stream_size){}
 
     /**
      * Creates a new DcpPduRspNegative object.
      * @param type_id the type id.
      * @param sender the sender.
      * @param resp_seq_id the resp seq id.
+     * @param exp_seq_id the expected next sequence id.
      * @param error_code the error code.
      */
-    DcpPduRspNegative(const DcpPduType type, const uint8_t sender, const uint16_t resp_seq_id, const DcpError error_code)
-            : DcpPduRspAck(6, type, sender, resp_seq_id) {
+    DcpPduRspNack(const DcpPduType type, const uint8_t sender, const uint16_t resp_seq_id, const uint16_t exp_seq_id, const DcpError error_code)
+            : DcpPduRspAck(8, type, sender, resp_seq_id) {
+
         getErrorCode() = error_code;
+        getExpSeqId() = exp_seq_id;
     }
 
 #if defined(DEBUG) || defined(LOGGING)
@@ -45,6 +57,7 @@ public:
      */
     virtual std::ostream &operator<<(std::ostream &os) {
         DcpPduRspAck::operator<<(os);
+        os << " exp_seq_id=" << getExpSeqId();
         os << " error_code=" << getErrorCode();
         return os;
     }
@@ -54,7 +67,7 @@ public:
      * Check if the stream_size is equal to the in the standard defined size.
      * @return stream_size is equal to the in the standard defined size
      */
-    SIZE_HANDLING(6)
+    SIZE_HANDLING(8)
 
 protected:
     /**
@@ -63,11 +76,13 @@ protected:
      * @param type_id the type id.
      * @param sender the sender.
      * @param resp_seq_id the resp seq id.
+     * @param exp_seq_id the expected next sequence id.
      * @param error_code the error code.
      */
-    DcpPduRspNegative(const size_t stream_size, const DcpPduType type_id, const uint8_t sender, const uint16_t resp_seq_id,
-                      const DcpError error_code) : DcpPduRspAck(stream_size, type_id, sender, resp_seq_id) {
+    DcpPduRspNack(const size_t stream_size, const DcpPduType type_id, const uint8_t sender, const uint16_t resp_seq_id,
+                  const uint16_t exp_seq_id, const DcpError error_code) : DcpPduRspAck(stream_size, type_id, sender, resp_seq_id) {
         getErrorCode() = error_code;
+        getExpSeqId() = exp_seq_id;
     }
 };
 

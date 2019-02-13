@@ -72,7 +72,8 @@ private:
     inline std::shared_ptr<Socket>
     getSocket(port_t port, ip_address_t ip) {
         asio::ip::udp::endpoint endpoint(asio::ip::address_v4(ip), port);
-        if (mainSocket->getEndpoint() == endpoint) {
+        if (mainSocket->getEndpoint() == endpoint ||
+          (mainSocket->getEndpoint().address().to_string() == "0.0.0.0" && mainSocket->getEndpoint().port() == port)) {
             return mainSocket;
         }
         for (const auto &it : ioIn) {

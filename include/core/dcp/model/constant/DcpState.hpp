@@ -172,6 +172,8 @@ static std::ostream &operator<<(std::ostream &os, DcpState type) {
             return os << "ERROR_HANDLING";
         case DcpState::ERROR_RESOLVED:
             return os << "ERROR_HANDLING";
+        default:
+            return os << "UNKNOWN(" << (unsigned((uint8_t) type)) << ")";
     }
     return os;
 }

@@ -63,7 +63,7 @@ public:
      */
     virtual std::ostream &operator<<(std::ostream &os) {
         DcpPduBasic::operator<<(os);
-        os << " slave_uuid =" << convertToUUIDStr(getSlaveUuid());
+        os << " slave_uuid=" << convertToUUIDStr(getSlaveUuid());
         os << " state_id=" << getStateId();
         os << " op_mode=" << getOpMode();
         os << " major_version=" << unsigned(getMajorVersion());
