@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019, FG Simulation und Modellierung, Leibniz Universität Hannover, Germany
+ * Copyright (C) 2019, FG Simulation und Modellierung, Leibniz Universitï¿½t Hannover, Germany
  *
  * All rights reserved.
  *
@@ -117,7 +117,22 @@ static std::ostream &operator<<(std::ostream &os, DcpDataType type) {
             return os << "string";
         case DcpDataType::binary:
             return os << "binary";
+            /* For logging purpose*/
         case DcpDataType::state:
+            return os << "uint8";
+        case DcpDataType::opMode:
+            return os << "uint8";
+        case DcpDataType::dataType:
+            return os << "uint8";
+        case DcpDataType::error:
+            return os << "uint16";
+        case DcpDataType::scope:
+            return os << "uint8";
+        case DcpDataType::logMode:
+            return os << "uint8";
+        case DcpDataType::logLevel:
+            return os << "uint8";
+        case DcpDataType::pduType:
             return os << "uint8";
         default:
             return os << "UNKNOWN(" << (unsigned((uint8_t) type)) << ")";
