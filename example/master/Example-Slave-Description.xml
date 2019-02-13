@@ -2,9 +2,7 @@
 <dcpSlaveDescription
   dcpMajorVersion="1" dcpMinorVersion="0" dcpSlaveName="dcpslave" uuid="b5279485-720d-4542-9f29-bee4d9a75ef9">
     <OpMode>
-        <HardRealTime set="false"/>
-        <SoftRealTime set="true"/>
-        <NonRealTime set="false"/>
+        <SoftRealTime/>
     </OpMode>
     <TimeRes>
         <Resolution numerator="1" denominator="100" fixed="true" recommended="true"/>

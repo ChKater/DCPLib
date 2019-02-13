@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 11)
 # Project
 project(dcpmaster)
 
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
 add_definitions("-DDEBUG")
 
 if (WIN32)
@@ -17,6 +19,7 @@ add_definitions("-DDEBUG")
 find_package(DCPLib REQUIRED)
 find_package(Threads REQUIRED)
 find_package(XercesC REQUIRED)
+find_package(ASIO REQUIRED )
 
 
 include_directories("src")

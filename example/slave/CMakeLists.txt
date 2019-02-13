@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 3.5)
 
 set(CMAKE_CXX_STANDARD 11)
 
+
 project(dcpslave)
+
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
     
 add_definitions("-DDEBUG")
 
@@ -12,6 +16,7 @@ endif()
 
 find_package(DCPLib REQUIRED)
 find_package(Threads REQUIRED)
+find_package(ASIO REQUIRED )
 
 include_directories("src")
     
